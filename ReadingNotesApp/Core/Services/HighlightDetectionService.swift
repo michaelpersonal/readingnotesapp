@@ -2,7 +2,7 @@
 //  HighlightDetectionService.swift
 //  ReadingNotesApp
 //
-//  Service for detecting highlighted regions in screenshots
+//  Service for detecting highlighted regions using color segmentation
 //
 
 import Foundation
@@ -14,201 +14,220 @@ struct DetectedHighlight {
     let boundingBox: CGRect
     let color: HighlightColor
     let image: UIImage?
+    let mask: CIImage? // Store mask for filtering
 }
 
 @MainActor
 class HighlightDetectionService {
-
-    // MARK: - Highlight Detection
-
+    
+    // MARK: - Color-Based Highlight Detection
+    
+    /// Detect highlights by color segmentation first, then return bounding boxes
     func detectHighlights(in image: UIImage) async -> [DetectedHighlight] {
-        // For now, use a simplified approach: detect text regions and check if they have colored background
         guard let cgImage = image.cgImage else { return [] }
-
-        var detectedHighlights: [DetectedHighlight] = []
-        let semaphore = DispatchSemaphore(value: 0)
-
-        // Detect all text regions at line level
-        let request = VNRecognizeTextRequest { request, error in
-            defer { semaphore.signal() }
-
-            guard error == nil,
-                  let observations = request.results as? [VNRecognizedTextObservation] else {
-                return
-            }
-
-            // For each text line, check if ANY part has a colored background
-            for observation in observations {
-                let boundingBox = observation.boundingBox
-
-                // Skip very small regions
-                if boundingBox.width < 0.1 || boundingBox.height < 0.02 {
-                    continue
-                }
-
-                // Expand more aggressively to better capture background color
-                let expandedBox = CGRect(
-                    x: max(0, boundingBox.origin.x - 0.02),
-                    y: max(0, boundingBox.origin.y - 0.01),
-                    width: min(1.0, boundingBox.width + 0.04),
-                    height: min(1.0, boundingBox.height + 0.02)
-                )
-
-                // Check if this region has ANY highlight color
-                if let highlightColor = self.detectHighlightColor(in: image, region: expandedBox) {
-                    detectedHighlights.append(DetectedHighlight(
-                        boundingBox: boundingBox,
-                        color: highlightColor,
-                        image: nil
-                    ))
-                }
-            }
+        
+        // Step 1: Create binary highlight mask
+        guard let mask = HighlightMaskService.createHighlightMask(from: image) else {
+            return []
         }
-
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        do {
-            try handler.perform([request])
-            semaphore.wait()
-        } catch {
-            print("Error detecting text: \(error)")
+        
+        // Step 2: Find connected components (contours) from the mask
+        let boundingBoxes = findConnectedComponents(in: mask, imageSize: CGSize(width: cgImage.width, height: cgImage.height))
+        
+        // Step 3: Merge adjacent regions that likely belong to same passage
+        // Use more conservative merging to avoid including non-highlighted lines
+        let mergedBoxes = mergeAdjacentRegions(boundingBoxes, imageSize: CGSize(width: cgImage.width, height: cgImage.height))
+        
+        // Step 4: Convert to normalized coordinates and create DetectedHighlight objects
+        let imageWidth = CGFloat(cgImage.width)
+        let imageHeight = CGFloat(cgImage.height)
+        
+        return mergedBoxes.map { box in
+            // Convert pixel coordinates to normalized (0-1) coordinates
+            // Vision uses bottom-left origin, so we need to flip Y
+            let normalizedBox = CGRect(
+                x: box.origin.x / imageWidth,
+                y: 1.0 - (box.origin.y + box.height) / imageHeight,
+                width: box.width / imageWidth,
+                height: box.height / imageHeight
+            )
+            
+            return DetectedHighlight(
+                boundingBox: normalizedBox,
+                color: .pink, // Detected as pink highlight
+                image: nil,
+                mask: mask // Store mask for later filtering
+            )
         }
-
-        // Sort by vertical position (top to bottom) - Vision uses bottom-left origin, so higher Y = lower on screen
-        let sortedHighlights = detectedHighlights.sorted { $0.boundingBox.origin.y > $1.boundingBox.origin.y }
-
-        // Merge nearby highlights that are part of the same highlighted region
-        return mergeNearbyHighlights(sortedHighlights)
     }
-
-    // MARK: - Merge Nearby Highlights
-
-    private func mergeNearbyHighlights(_ highlights: [DetectedHighlight]) -> [DetectedHighlight] {
-        guard !highlights.isEmpty else { return [] }
-
-        var merged: [DetectedHighlight] = []
-        var currentGroup: [DetectedHighlight] = [highlights[0]]
-
-        for i in 1..<highlights.count {
-            let current = highlights[i]
-            let previous = highlights[i-1]
-
-            // Check if highlights are close vertically (part of same highlight block)
-            let verticalDistance = abs(current.boundingBox.origin.y - previous.boundingBox.origin.y)
-
-            // Be VERY aggressive with merging - Kindle highlights often span many lines
-            // Merge if they're within 0.1 units (roughly 2-3 line heights)
-            // This ensures we capture complete highlighted passages
-            if verticalDistance < 0.1 && current.color == previous.color {
+    
+    // MARK: - Connected Component Analysis
+    
+    /// Find connected components from the binary mask
+    private func findConnectedComponents(in mask: CIImage, imageSize: CGSize) -> [CGRect] {
+        let context = CIContext()
+        guard let cgMask = context.createCGImage(mask, from: mask.extent) else {
+            return []
+        }
+        
+        let width = cgMask.width
+        let height = cgMask.height
+        
+        // Read mask pixels
+        var pixelData = [UInt8](repeating: 0, count: width * height)
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+        
+        guard let bitmapContext = CGContext(
+            data: &pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else {
+            return []
+        }
+        
+        bitmapContext.draw(cgMask, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        // Find connected components using flood fill
+        var visited = Array(repeating: Array(repeating: false, count: width), count: height)
+        var boundingBoxes: [CGRect] = []
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let offset = y * width + x
+                let isHighlight = pixelData[offset] > 128 // White = highlight
+                
+                if isHighlight && !visited[y][x] {
+                    // Flood fill to find connected component
+                    var minX = x
+                    var maxX = x
+                    var minY = y
+                    var maxY = y
+                    
+                    var stack = [(x: Int, y: Int)]()
+                    stack.append((x, y))
+                    visited[y][x] = true
+                    
+                    while !stack.isEmpty {
+                        let (cx, cy) = stack.removeLast()
+                        minX = min(minX, cx)
+                        maxX = max(maxX, cx)
+                        minY = min(minY, cy)
+                        maxY = max(maxY, cy)
+                        
+                        // Check 8-connected neighbors
+                        for dy in -1...1 {
+                            for dx in -1...1 {
+                                if dx == 0 && dy == 0 { continue }
+                                let nx = cx + dx
+                                let ny = cy + dy
+                                
+                                if nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[ny][nx] {
+                                    let nOffset = ny * width + nx
+                                    if pixelData[nOffset] > 128 {
+                                        visited[ny][nx] = true
+                                        stack.append((nx, ny))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Create bounding box for this component
+                    let bbox = CGRect(
+                        x: CGFloat(minX),
+                        y: CGFloat(minY),
+                        width: CGFloat(maxX - minX + 1),
+                        height: CGFloat(maxY - minY + 1)
+                    )
+                    
+                    // Filter out very small regions (noise)
+                    if bbox.width >= 20 && bbox.height >= 10 {
+                        boundingBoxes.append(bbox)
+                    }
+                }
+            }
+        }
+        
+        return boundingBoxes
+    }
+    
+    // MARK: - Region Merging
+    
+    /// Merge adjacent regions that likely belong to the same highlighted passage
+    /// Uses conservative merging to avoid including non-highlighted lines
+    private func mergeAdjacentRegions(_ boxes: [CGRect], imageSize: CGSize) -> [CGRect] {
+        guard !boxes.isEmpty else { return [] }
+        
+        // Sort by vertical position (top to bottom)
+        let sorted = boxes.sorted { $0.origin.y < $1.origin.y }
+        
+        // Estimate average line height from boxes
+        let avgHeight = sorted.prefix(min(5, sorted.count)).map { $0.height }.reduce(0, +) / CGFloat(min(5, sorted.count))
+        let lineHeight = max(avgHeight, 20.0) // Minimum line height
+        
+        var merged: [CGRect] = []
+        var currentGroup: [CGRect] = [sorted[0]]
+        
+        for i in 1..<sorted.count {
+            let current = sorted[i]
+            let previous = sorted[i-1]
+            
+            // Calculate vertical gap
+            let verticalGap = current.origin.y - (previous.origin.y + previous.height)
+            
+            // Calculate horizontal overlap
+            let horizontalOverlap = max(0, min(current.maxX, previous.maxX) - max(current.minX, previous.minX))
+            let minWidth = min(current.width, previous.width)
+            let overlapRatio = minWidth > 0 ? horizontalOverlap / minWidth : 0
+            
+            // Check width consistency (similar width suggests same line/paragraph)
+            let widthRatio = min(current.width, previous.width) / max(current.width, previous.width)
+            let similarWidth = widthRatio > 0.7
+            
+            // Check left alignment (similar left edge suggests same paragraph)
+            let leftAlignmentDiff = abs(current.origin.x - previous.origin.x)
+            let similarAlignment = leftAlignmentDiff < lineHeight * 0.3
+            
+            // Conservative merging criteria:
+            // 1. Vertical gap < 0.8 * lineHeight (very close vertically)
+            // 2. Horizontal overlap > 50% (significant overlap)
+            // 3. Similar width OR similar left alignment (belongs to same passage)
+            let shouldMerge = verticalGap < (lineHeight * 0.8) &&
+                             overlapRatio > 0.5 &&
+                             (similarWidth || similarAlignment)
+            
+            if shouldMerge {
                 currentGroup.append(current)
             } else {
-                // Merge the current group and start a new one
-                if let mergedHighlight = mergeGroup(currentGroup) {
-                    merged.append(mergedHighlight)
+                // Merge current group
+                if let mergedBox = mergeGroup(currentGroup) {
+                    merged.append(mergedBox)
                 }
                 currentGroup = [current]
             }
         }
-
-        // Don't forget the last group
-        if let mergedHighlight = mergeGroup(currentGroup) {
-            merged.append(mergedHighlight)
+        
+        // Don't forget last group
+        if let mergedBox = mergeGroup(currentGroup) {
+            merged.append(mergedBox)
         }
-
+        
         return merged
     }
-
-    private func mergeGroup(_ group: [DetectedHighlight]) -> DetectedHighlight? {
+    
+    private func mergeGroup(_ group: [CGRect]) -> CGRect? {
         guard !group.isEmpty else { return nil }
-
-        if group.count == 1 {
-            return group[0]
-        }
-
-        // Calculate bounding box that encompasses all highlights in the group
-        let minX = group.map { $0.boundingBox.minX }.min() ?? 0
-        let minY = group.map { $0.boundingBox.minY }.min() ?? 0
-        let maxX = group.map { $0.boundingBox.maxX }.max() ?? 1
-        let maxY = group.map { $0.boundingBox.maxY }.max() ?? 1
-
-        let mergedBox = CGRect(
-            x: minX,
-            y: minY,
-            width: maxX - minX,
-            height: maxY - minY
-        )
-
-        // Use the color from the first highlight
-        return DetectedHighlight(
-            boundingBox: mergedBox,
-            color: group[0].color,
-            image: nil
-        )
+        if group.count == 1 { return group[0] }
+        
+        let minX = group.map { $0.minX }.min() ?? 0
+        let minY = group.map { $0.minY }.min() ?? 0
+        let maxX = group.map { $0.maxX }.max() ?? 0
+        let maxY = group.map { $0.maxY }.max() ?? 0
+        
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
-
-    // MARK: - Detect Highlight Color
-
-    private func detectHighlightColor(in image: UIImage, region: CGRect) -> HighlightColor? {
-        guard let croppedImage = ImageProcessor.cropImage(image, toRect: region),
-              let avgColor = ImageProcessor.getDominantColor(in: image, region: region) else {
-            return nil
-        }
-
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-
-        avgColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-
-        // Convert to HSV for better color detection
-        let maxC = max(red, green, blue)
-        let minC = min(red, green, blue)
-        let delta = maxC - minC
-
-        // Calculate saturation and value
-        let saturation = maxC == 0 ? 0 : delta / maxC
-        let value = maxC
-
-        // Only consider it a highlight if it has reasonable saturation and brightness
-        // Made very lenient to catch Kindle's subtle highlights
-        if saturation < 0.05 || value < 0.4 {
-            return nil // Too gray or too dark
-        }
-
-        // Determine color based on RGB values (more lenient thresholds)
-        // Yellow highlights
-        if red > 0.75 && green > 0.65 && blue < 0.55 {
-            return .yellow
-        }
-        // Orange highlights
-        else if red > 0.75 && green > 0.45 && green < 0.75 && blue < 0.45 {
-            return .orange
-        }
-        // Blue highlights
-        else if blue > 0.65 && red < 0.55 {
-            return .blue
-        }
-        // Pink/salmon/rose highlights (very common in Kindle) - more lenient
-        else if red > 0.65 && saturation > 0.08 {
-            // Any text with reddish tint and some saturation
-            if green > 0.6 && blue > 0.6 {
-                // Light pink/salmon
-                return .pink
-            } else if green < 0.7 && blue < 0.7 {
-                // Darker pink/rose
-                return .pink
-            }
-        }
-
-        // If it has some color saturation, consider it unknown highlight
-        if saturation > 0.10 && value > 0.6 {
-            return .unknown
-        }
-
-        return nil
-    }
-
 }

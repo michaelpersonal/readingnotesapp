@@ -45,6 +45,7 @@ struct ScreenshotDetailView: View {
                     StatusBadge(status: screenshot.processingStatus)
                 }
                 .padding(.horizontal)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !screenshot.highlights.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
@@ -63,7 +64,10 @@ struct ScreenshotDetailView: View {
                         ForEach(screenshot.highlights, id: \.id) { highlight in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(highlight.extractedText)
+                                    .font(.body)
+                                    .fixedSize(horizontal: false, vertical: true)
                                     .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.yellow.opacity(0.2))
                                     .cornerRadius(8)
 
@@ -79,6 +83,7 @@ struct ScreenshotDetailView: View {
                                 }
                             }
                             .padding(.horizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
                         // Sync to Notion button
@@ -167,8 +172,9 @@ struct ScreenshotDetailView: View {
                 }
             }
             .padding(.vertical)
-            .padding(.bottom, 100) // Extra bottom padding to ensure buttons are accessible
+            .padding(.bottom, 120) // Extra bottom padding to ensure buttons are accessible
         }
+        .scrollIndicators(.visible)
         .navigationTitle("Screenshot Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

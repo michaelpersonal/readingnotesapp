@@ -31,6 +31,8 @@
 		4EC0AA302F0AE249007EEAA7 /* NotionConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA2E2F0AE249007EEAA7 /* NotionConnectionView.swift */; };
 		4EC0AA312F0AE249007EEAA7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA2F2F0AE249007EEAA7 /* SettingsView.swift */; };
 		4EC0AA342F0AEE53007EEAA7 /* PageSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA332F0AEE53007EEAA7 /* PageSelectionView.swift */; };
+		4EC0AA362F0B114E007EEAA7 /* HighlightMaskService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA352F0B114E007EEAA7 /* HighlightMaskService.swift */; };
+		4EC0AA382F0B14F4007EEAA7 /* LineBasedHighlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA372F0B14F4007EEAA7 /* LineBasedHighlightService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +63,8 @@
 		4EC0AA2F2F0AE249007EEAA7 /* SettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4EC0AA322F0AE75C007EEAA7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4EC0AA332F0AEE53007EEAA7 /* PageSelectionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PageSelectionView.swift; sourceTree = "<group>"; };
+		4EC0AA352F0B114E007EEAA7 /* HighlightMaskService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightMaskService.swift; sourceTree = "<group>"; };
+		4EC0AA372F0B14F4007EEAA7 /* LineBasedHighlightService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LineBasedHighlightService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +140,8 @@
 		4EC0A9FA2F0ACD58007EEAA7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				4EC0AA372F0B14F4007EEAA7 /* LineBasedHighlightService.swift */,
+				4EC0AA352F0B114E007EEAA7 /* HighlightMaskService.swift */,
 				4EC0AA1B2F0AD77D007EEAA7 /* HighlightDetectionService.swift */,
 				4EC0AA1C2F0AD77D007EEAA7 /* ImageProcessingService.swift */,
 				4EC0AA1A2F0AD77D007EEAA7 /* OCRService.swift */,
@@ -342,6 +348,7 @@
 				4EC0AA342F0AEE53007EEAA7 /* PageSelectionView.swift in Sources */,
 				4EC0AA1F2F0AD77D007EEAA7 /* ImageProcessingService.swift in Sources */,
 				4EC0AA0F2F0ACD80007EEAA7 /* ScreenshotListViewModel.swift in Sources */,
+				4EC0AA362F0B114E007EEAA7 /* HighlightMaskService.swift in Sources */,
 				4EC0AA102F0ACD80007EEAA7 /* ScreenshotDetailView.swift in Sources */,
 				4EC0AA292F0AE1FD007EEAA7 /* NotionBlock.swift in Sources */,
 				4EC0AA212F0AD78E007EEAA7 /* ImageProcessor.swift in Sources */,
@@ -354,6 +361,7 @@
 				4EC0A9E32F0ACB50007EEAA7 /* ReadingNotesAppApp.swift in Sources */,
 				4EC0AA112F0ACD80007EEAA7 /* ScreenshotListView.swift in Sources */,
 				4EC0A9FE2F0ACD59007EEAA7 /* KindleScreenshot.swift in Sources */,
+				4EC0AA382F0B14F4007EEAA7 /* LineBasedHighlightService.swift in Sources */,
 				4EC0AA1E2F0AD77D007EEAA7 /* HighlightDetectionService.swift in Sources */,
 				4EC0A9FF2F0ACD59007EEAA7 /* Note.swift in Sources */,
 				4EC0AA2A2F0AE1FD007EEAA7 /* NotionPage.swift in Sources */,

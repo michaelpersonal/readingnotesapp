@@ -8,17 +8,26 @@
 import Foundation
 import UIKit
 import SwiftData
+import Vision
+import CoreImage
 
 @MainActor
 class ImageProcessingService {
     private let ocrService: OCRService
     private let highlightDetectionService: HighlightDetectionService
+    private let lineBasedService: LineBasedHighlightService
     private let modelContext: ModelContext
+    
+    // Tuning parameters (legacy - kept for compatibility)
+    private let overlapThreshold: Float = 0.15
+    private let verticalPaddingRatio: CGFloat = 0.15
+    private let horizontalPaddingRatio: CGFloat = 0.05
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
         self.ocrService = OCRService()
         self.highlightDetectionService = HighlightDetectionService()
+        self.lineBasedService = LineBasedHighlightService()
     }
 
     // MARK: - Main Processing Pipeline
@@ -36,39 +45,41 @@ class ImageProcessingService {
         }
 
         do {
-            // Step 1: Detect highlighted regions
-            let detectedHighlights = await highlightDetectionService.detectHighlights(in: image)
-
-            // Step 2: For each highlight, extract text
-            for detectedHighlight in detectedHighlights {
-                // Extract text from the highlighted region using enhanced OCR
-                let ocrResults = try await ocrService.recognizeTextWithPreprocessing(in: image, region: detectedHighlight.boundingBox)
-
-                // Combine OCR results into single text
-                let extractedText = ocrResults.map { $0.text }.joined(separator: " ")
-
-                // Skip if no text was extracted
-                if extractedText.trimmingCharacters(in: .whitespaces).isEmpty {
+            // Step 1: Create highlight mask
+            guard let mask = HighlightMaskService.createHighlightMask(from: image) else {
+                screenshot.processingStatus = .failed
+                try modelContext.save()
+                throw ProcessingError.noHighlightsDetected
+            }
+            
+            // Step 2: Use line-based extraction
+            // This extracts entire lines if any part is highlighted, avoiding partial words
+            let extractedPassages = try await lineBasedService.extractHighlightedLines(
+                from: image,
+                mask: mask
+            )
+            
+            // Step 3: Create Highlight entities for each passage
+            for passage in extractedPassages {
+                if passage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     continue
                 }
-
-                // Calculate average confidence
-                let avgConfidence = ocrResults.isEmpty ? 0.0 : ocrResults.map { Double($0.confidence) }.reduce(0, +) / Double(ocrResults.count)
-
-                // Create Highlight entity
+                
+                // Get bounding box for this passage (we'll use a default for now)
+                // In a more sophisticated version, we could track which lines belong to which passage
                 let highlight = Highlight(
                     screenshot: screenshot,
-                    extractedText: extractedText,
-                    confidence: avgConfidence,
+                    extractedText: passage,
+                    confidence: 0.8, // Default confidence
                     boundingBox: BoundingBox(
-                        x: Double(detectedHighlight.boundingBox.origin.x),
-                        y: Double(detectedHighlight.boundingBox.origin.y),
-                        width: Double(detectedHighlight.boundingBox.width),
-                        height: Double(detectedHighlight.boundingBox.height)
+                        x: 0.0,
+                        y: 0.0,
+                        width: 1.0,
+                        height: 0.1 // Default height
                     ),
-                    highlightColor: detectedHighlight.color
+                    highlightColor: .pink
                 )
-
+                
                 modelContext.insert(highlight)
                 screenshot.highlights.append(highlight)
             }
@@ -88,6 +99,7 @@ class ImageProcessingService {
             throw error
         }
     }
+    
 
     // MARK: - Batch Processing
 
