@@ -1,9 +1,9 @@
 # AI Development Handoff Document
 
 **Project**: Reading Notes App (iOS Kindle Screenshot OCR + Notion Sync)
-**Last Updated**: January 4, 2026
-**Session**: Initial development session
-**Status**: Core features complete, functional MVP
+**Last Updated**: January 2026
+**Session**: Line-based highlight extraction implementation
+**Status**: Core features complete, line-based extraction implemented and tested
 
 ---
 
@@ -13,18 +13,27 @@ Native iOS app that extracts highlighted text from Kindle screenshots using OCR 
 
 **What Works**: ✅
 - Screenshot import from Photos
-- Highlight detection (yellow, orange, blue, pink)
-- OCR text extraction using Vision Framework
+- **Line-based highlight extraction** - Extracts entire lines if any part is highlighted
+- **Binary mask-based detection** - Robust pink highlight detection using color segmentation
+- **Robust line clustering** - Groups Vision observations into lines using y-overlap and baseline proximity
+- OCR text extraction using Vision Framework with upscaling
 - Personal note-taking
 - Notion sync with token authentication
 - One-page-per-book organization
 - Sync status tracking and reset
 
+**Recent Improvements** (January 2026):
+- ✅ Implemented line-based extraction to avoid partial words
+- ✅ Added HighlightMaskService for binary mask generation
+- ✅ Added LineBasedHighlightService for robust line clustering
+- ✅ Improved OCR with 2x upscaling and multiple preprocessing strategies
+- ✅ Grid-based overlap sampling for performance
+- ✅ Fallback mechanisms for better reliability
+
 **Known Issues**: ⚠️
-- Highlight extraction sometimes incomplete (merging threshold may need tuning)
-- Book title extraction removed (was producing garbled text)
 - Debug logging still active (needs cleanup for production)
-- Scroll view works but padding could be optimized
+- App icon missing (1024x1024 PNG needed for App Store)
+- Book title extraction removed (was producing garbled text)
 
 ---
 
@@ -46,8 +55,10 @@ ReadingNotesApp/
 │   │   │
 │   │   ├── Services/                    # Core business logic
 │   │   │   ├── ImageProcessingService.swift    # Main orchestrator
-│   │   │   ├── OCRService.swift                # Vision Framework wrapper
-│   │   │   └── HighlightDetectionService.swift # Color-based detection
+│   │   │   ├── OCRService.swift                # Vision Framework wrapper with upscaling
+│   │   │   ├── HighlightDetectionService.swift # Color-based detection (legacy)
+│   │   │   ├── HighlightMaskService.swift      # Binary mask generation for highlights
+│   │   │   └── LineBasedHighlightService.swift # Line-based extraction with clustering
 │   │   │
 │   │   ├── Repositories/
 │   │   │   └── ScreenshotRepository.swift      # Data access layer
@@ -80,14 +91,48 @@ ReadingNotesApp/
 │   └── Info.plist                       # App permissions
 │
 ├── README.md                            # User documentation
-├── AGENT.md                             # Development notes
+├── AI-HANDOFF.md                        # This file
 ├── NOTION_SETUP.md                      # Notion setup guide
-└── AI-HANDOFF.md                        # This file
+├── APP_STORE_SUBMISSION_CHECKLIST.md    # App Store submission guide
+├── LINE_BASED_EXTRACTION_SUMMARY.md     # Line-based extraction details
+├── HIGHLIGHT_EXTRACTION_PLAN.md         # Extraction algorithm plan
+└── OCR_IMPROVEMENT_OPTIONS.md           # OCR improvement options
 ```
 
 ---
 
 ## 🔑 Key Technical Details
+
+### Service Architecture
+
+**ImageProcessingService** (Main Orchestrator)
+- Coordinates the entire processing pipeline
+- Uses `LineBasedHighlightService` for extraction
+- Creates highlight entities and saves to SwiftData
+
+**LineBasedHighlightService** (Line-Based Extraction)
+- Main extraction service using line-based approach
+- Clusters Vision observations into lines
+- Filters lines by mask overlap
+- Extracts text with upscaling and fallbacks
+- Handles hyphenation and text cleaning
+
+**HighlightMaskService** (Mask Generation)
+- Creates binary mask of pink highlights
+- Uses RGB color thresholds for pink detection
+- Applies morphological operations (closing, opening)
+- Calculates overlap ratios for filtering
+
+**HighlightDetectionService** (Legacy - Color Detection)
+- Original color-based detection
+- Still used for detecting highlight regions
+- Can be extended for other colors (yellow, orange, blue)
+
+**OCRService** (Text Recognition)
+- Wraps Apple Vision Framework
+- Multiple preprocessing strategies (binarization, high contrast, upscaling)
+- Returns best result based on confidence
+- Handles region cropping and coordinate conversion
 
 ### SwiftData Models
 
@@ -126,26 +171,46 @@ ReadingNotesApp/
 - notionBlockId: String?
 ```
 
-### Processing Pipeline
+### Processing Pipeline (Current - Line-Based)
 
 ```
 1. User imports screenshot → Saved to SwiftData
 2. User taps "Process Screenshot"
    ↓
-3. HighlightDetectionService.detectHighlights()
-   - Uses Vision to detect all text lines
-   - For each line, samples background color (HSV)
-   - Groups lines by color (yellow, orange, blue, pink)
-   - Merges nearby lines (< 0.1 units = 2-3 line heights)
+3. HighlightMaskService.createHighlightMask()
+   - Creates binary mask of pink highlights using RGB color thresholds
+   - Applies morphological operations (closing, opening) to clean mask
    ↓
-4. OCRService.recognizeTextWithPreprocessing()
-   - Crops to merged highlight region
-   - Runs OCR on original + preprocessed image
-   - Returns higher confidence result
+4. LineBasedHighlightService.extractHighlightedLines()
+   a) Detect text column bounds (union of all text observations)
+   b) Run Vision to get all text observations
+   c) Cluster observations into lines:
+      - Sort by centerY (top-to-bottom)
+      - Group if: centerY diff < 0.5*medianHeight OR vertical overlap > 40%
+      - Build line boxes as union of member boxes
+      - Expand vertically by 10% of line height
+   d) Filter lines by mask overlap (grid sampling):
+      - Sample 20x5 grid points in line box
+      - Keep lines with >10% overlap (with fallback to 5% or all lines)
+   e) Extract text from highlighted lines:
+      - Extend line box to full column width
+      - Add minimal padding (8% vertical, 3% horizontal)
+      - Upscale 2x with high-quality interpolation
+      - Run OCR on upscaled line crop
+      - Fallback to Vision text if OCR fails
+   f) Merge consecutive lines into passages
+   g) Fix hyphenation and normalize spacing
    ↓
 5. Save Highlight entities to SwiftData
 6. Mark screenshot as "completed"
 ```
+
+**Key Improvements**:
+- Extracts entire lines (no partial words)
+- Robust line clustering handles Vision's imperfect line detection
+- Grid sampling for fast overlap calculation
+- Minimal padding reduces adjacent line inclusion
+- Fallback mechanisms ensure text is extracted
 
 ### Notion Sync Flow
 
@@ -207,32 +272,50 @@ xcodebuild -scheme ReadingNotesApp -destination 'platform=iOS Simulator,name=iPh
 
 ### Common Tasks
 
-#### Fix Incomplete Highlight Extraction
+#### Tune Line-Based Extraction
 
-**File**: `ReadingNotesApp/Core/Services/HighlightDetectionService.swift`
+**File**: `ReadingNotesApp/Core/Services/LineBasedHighlightService.swift`
 
-**Current merging threshold**: 0.1 units (line 104)
+**Key Parameters** (lines 30-37):
 ```swift
-if verticalDistance < 0.1 && current.color == previous.color {
+private let lineOverlapThreshold: Float = 0.10  // Line highlighted if >10% overlap
+private let verticalPaddingRatio: CGFloat = 0.08  // 8% of line height
+private let horizontalPaddingRatio: CGFloat = 0.03  // 3% of line width
+private let minimumTextHeight: CGFloat = 0.01  // Filter tiny observations
+private let lineClusteringThreshold: CGFloat = 0.5  // 0.5 * medianHeight
+private let verticalOverlapThreshold: CGFloat = 0.4  // 40% overlap to merge
 ```
 
-**To make more aggressive** (merge more lines):
-- Increase threshold to 0.15 or 0.2
-- Will capture longer passages but risk merging separate highlights
+**To include more lines** (less strict):
+- Lower `lineOverlapThreshold` to 0.05-0.08
+- Increase `verticalPaddingRatio` to 0.10-0.12 (but may include adjacent lines)
 
-**To make more conservative** (split more):
-- Decrease threshold to 0.05 or 0.03
-- Will capture distinct highlights but may fragment passages
+**To exclude more lines** (more strict):
+- Raise `lineOverlapThreshold` to 0.15-0.20
+- Decrease `verticalPaddingRatio` to 0.05-0.06
 
-**Color detection tuning** (lines 177-179):
+**To merge more observations into lines**:
+- Increase `lineClusteringThreshold` to 0.6-0.7
+- Increase `verticalOverlapThreshold` to 0.5
+
+#### Tune Pink Highlight Detection
+
+**File**: `ReadingNotesApp/Core/Services/HighlightMaskService.swift`
+
+**Pink detection thresholds** (lines 50-56):
 ```swift
-// Current thresholds - very lenient
-if saturation < 0.05 || value < 0.4 {
-    return nil
-}
+bool isPink = r > 0.55 && g > 0.35 && b > 0.35 &&
+              (r - b) > 0.1 &&
+              ((r + g + b) / 3.0) > 0.4;
 ```
-- Decrease saturation/value for even more lenient
-- Increase for stricter color matching
+
+**To detect more pink** (more lenient):
+- Lower red threshold: `r > 0.50`
+- Lower green/blue: `g > 0.30 && b > 0.30`
+- Lower brightness: `((r + g + b) / 3.0) > 0.35`
+
+**To detect less pink** (more strict):
+- Raise thresholds accordingly
 
 #### Add New Highlight Color
 
@@ -341,20 +424,34 @@ let container = ModelContainer(
 
 ## 🐛 Known Issues & Solutions
 
-### Issue: Highlights Still Incomplete
+### Issue: Extracted Text is Empty
 
-**Symptoms**: Only partial sentences extracted, missing lines
+**Symptoms**: No text extracted after processing
 
 **Diagnosis**:
-- Check console for "Building blocks: X unsynced highlights"
-- Look at bounding boxes in HighlightDetectionService
-- May need even more aggressive merging
+- Check if mask is detecting highlights (add debug logging)
+- Check if line clustering is working (may return empty lines)
+- Check if overlap filtering is too strict
 
 **Solutions**:
-1. Increase merge threshold to 0.15-0.2
-2. Make color detection even more lenient (saturation < 0.03)
-3. Increase bounding box expansion (lines 51-54)
-4. Check if Vision is detecting all text lines (add logging)
+1. Lower `lineOverlapThreshold` in LineBasedHighlightService (currently 0.10)
+2. Check fallback logic - should use all lines if filtering removes everything
+3. Verify mask generation - check if pink detection thresholds are correct
+4. Add debug logging to see where text is being lost:
+   ```swift
+   print("Lines detected: \(textLines.count)")
+   print("Highlighted lines: \(highlightedLines.count)")
+   print("Extracted lines: \(extractedLines.count)")
+   ```
+
+### Issue: Extracted Text Includes Non-Highlighted Content
+
+**Symptoms**: Text from adjacent lines included
+
+**Solutions**:
+1. Decrease `verticalPaddingRatio` (currently 0.08)
+2. Increase `lineOverlapThreshold` to be more strict
+3. Check if line boxes are extending too far (extendLineToColumnWidth)
 
 ### Issue: ScrollView Not Scrolling
 
@@ -583,11 +680,14 @@ Manual tests to run after changes:
 
 ## 📝 Important Notes for AI Assistants
 
-### When Modifying Highlight Detection
+### When Modifying Highlight Extraction
 - Always test with real Kindle screenshots
-- Merging threshold affects passage completeness vs. separation
-- Color thresholds affect false positives vs. missed highlights
+- Line-based extraction extracts entire lines - this is intentional to avoid partial words
+- Overlap threshold affects which lines are included (lower = more lines)
+- Padding affects adjacent line inclusion (lower = less padding, fewer adjacent lines)
+- Mask detection thresholds affect pink highlight detection (lower = more lenient)
 - Changes require reprocessing existing screenshots
+- Current implementation uses line-based approach - see LINE_BASED_EXTRACTION_SUMMARY.md
 
 ### When Working with Notion API
 - Notion's JSON structure is complex and varies by object type
@@ -666,6 +766,7 @@ git push origin main
 
 ---
 
-**Last updated**: January 4, 2026
-**Built with**: Claude Code (Anthropic)
-**Status**: Functional MVP, ready for iteration
+**Last updated**: January 2026
+**Recent changes**: Implemented line-based highlight extraction with robust clustering
+**Status**: Functional MVP with improved extraction, ready for App Store submission
+**Next steps**: Add app icon, prepare screenshots, submit to App Store
