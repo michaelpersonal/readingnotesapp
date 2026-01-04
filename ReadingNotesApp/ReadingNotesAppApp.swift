@@ -12,7 +12,10 @@ import SwiftData
 struct ReadingNotesAppApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            KindleScreenshot.self,
+            Highlight.self,
+            Note.self,
+            NotionConfig.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
