@@ -15,6 +15,10 @@ class NotionAuthService: ObservableObject {
 
     // Keychain keys
     private let accessTokenKey = "notion_access_token"
+    
+    // App Group for sharing between app and extension
+    private let appGroupId = "group.com.michaelguo.ReadingNotesApp"
+    private let sharedTokenKey = "shared_notion_token"
 
     // MARK: - Authentication
 
@@ -28,24 +32,54 @@ class NotionAuthService: ObservableObject {
             throw NotionAuthError.invalidTokenFormat
         }
 
-        // Store token securely
+        // Store token securely in Keychain
         try storeAccessToken(token)
+        
+        // Also store in shared UserDefaults for extension access
+        storeInSharedDefaults(token)
+        
         isAuthenticated = true
     }
 
     // MARK: - Token Management
 
     func getAccessToken() -> String? {
-        return retrieveFromKeychain(key: accessTokenKey)
+        // Try Keychain first
+        if let token = retrieveFromKeychain(key: accessTokenKey) {
+            return token
+        }
+        // Fallback to shared UserDefaults (for extension)
+        return retrieveFromSharedDefaults()
     }
 
     func signOut() throws {
         try deleteFromKeychain(key: accessTokenKey)
+        removeFromSharedDefaults()
         isAuthenticated = false
     }
 
     func checkAuthenticationStatus() {
         isAuthenticated = getAccessToken() != nil
+    }
+    
+    // MARK: - Shared UserDefaults (for App Extension)
+    
+    private func storeInSharedDefaults(_ token: String) {
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.set(token, forKey: sharedTokenKey)
+            defaults.synchronize()
+        }
+    }
+    
+    private func retrieveFromSharedDefaults() -> String? {
+        return UserDefaults(suiteName: appGroupId)?.string(forKey: sharedTokenKey)
+    }
+    
+    private func removeFromSharedDefaults() {
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.removeObject(forKey: sharedTokenKey)
+            defaults.synchronize()
+        }
     }
 
     // MARK: - Keychain Operations

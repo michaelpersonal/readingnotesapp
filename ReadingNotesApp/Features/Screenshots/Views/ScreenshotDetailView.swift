@@ -49,17 +49,9 @@ struct ScreenshotDetailView: View {
 
                 if !screenshot.highlights.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Highlights (\(screenshot.highlights.count))")
-                                .font(.headline)
-                            Spacer()
-                            // Debug info
-                            let unsyncedCount = screenshot.highlights.filter { !$0.isSyncedToNotion }.count
-                            Text("Unsynced: \(unsyncedCount)")
-                                .font(.caption)
-                                .foregroundStyle(unsyncedCount > 0 ? .orange : .green)
-                        }
-                        .padding(.horizontal)
+                        Text("Highlights (\(screenshot.highlights.count))")
+                            .font(.headline)
+                            .padding(.horizontal)
 
                         ForEach(screenshot.highlights, id: \.id) { highlight in
                             VStack(alignment: .leading, spacing: 8) {
@@ -242,19 +234,14 @@ struct ScreenshotDetailView: View {
     }
 
     private func resetSyncStatus() {
-        print("🔄 Resetting sync status for screenshot")
-        print("   Total highlights: \(screenshot.highlights.count)")
-
         // Reset screenshot sync status
         screenshot.isSyncedToNotion = false
         screenshot.notionPageId = nil
 
         // Reset all highlights and notes sync status
         let highlightArray = Array(screenshot.highlights)
-        print("   Processing \(highlightArray.count) highlights...")
 
-        for (index, highlight) in highlightArray.enumerated() {
-            print("   Resetting highlight \(index + 1)")
+        for highlight in highlightArray {
             highlight.isSyncedToNotion = false
             highlight.notionBlockId = nil
 
@@ -268,10 +255,8 @@ struct ScreenshotDetailView: View {
         // Save changes
         do {
             try modelContext.save()
-            let unsyncedCount = screenshot.highlights.filter { !$0.isSyncedToNotion }.count
-            print("✅ Sync status reset: \(unsyncedCount) unsynced highlights out of \(screenshot.highlights.count)")
         } catch {
-            print("❌ Failed to reset sync status: \(error)")
+            // Error handled silently - UI will reflect state
         }
     }
 }

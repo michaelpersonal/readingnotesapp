@@ -12,9 +12,9 @@ import SwiftData
 class NotionSyncService {
     private let apiClient: NotionAPIClient
     private let authService: NotionAuthService
-    private let modelContext: ModelContext
+    private let modelContext: ModelContext?
 
-    init(modelContext: ModelContext, authService: NotionAuthService) {
+    init(modelContext: ModelContext?, authService: NotionAuthService) {
         self.modelContext = modelContext
         self.authService = authService
         self.apiClient = NotionAPIClient()
@@ -27,8 +27,6 @@ class NotionSyncService {
             throw NotionSyncError.notAuthenticated
         }
 
-        print("🔄 Syncing to page: \(pageId)")
-
         // Append highlights to existing page
         try await appendHighlightsToPage(screenshot, pageId: pageId, accessToken: accessToken)
 
@@ -36,8 +34,7 @@ class NotionSyncService {
         screenshot.notionPageId = pageId
         screenshot.isSyncedToNotion = true
 
-        try modelContext.save()
-        print("✅ Sync completed successfully")
+        try modelContext?.save()
     }
 
     func syncScreenshotToNewPage(_ screenshot: KindleScreenshot, bookTitle: String, parentPageId: String) async throws {
@@ -52,7 +49,7 @@ class NotionSyncService {
         screenshot.notionPageId = pageId
         screenshot.isSyncedToNotion = true
 
-        try modelContext.save()
+        try modelContext?.save()
     }
 
     private func createPageWithHighlights(_ screenshot: KindleScreenshot, title: String, parentPageId: String, accessToken: String) async throws -> String {
@@ -104,7 +101,6 @@ class NotionSyncService {
         // Only include highlights that haven't been synced yet
         let unsyncedHighlights = screenshot.highlights.filter { !$0.isSyncedToNotion }
 
-        print("📝 Building blocks: \(unsyncedHighlights.count) unsynced highlights out of \(screenshot.highlights.count) total")
 
         if !unsyncedHighlights.isEmpty {
             // Add timestamp divider
@@ -130,6 +126,61 @@ class NotionSyncService {
                 blocks.append(.divider())
             }
         }
+
+        return blocks
+    }
+
+    // MARK: - Sync Text (for Share Extension)
+
+    /// Sync plain text to an existing Notion page
+    func syncTextToPage(_ text: String, pageId: String) async throws {
+        guard let accessToken = authService.getAccessToken() else {
+            throw NotionSyncError.notAuthenticated
+        }
+
+        // Build blocks from text
+        let blocks = buildTextBlocks(text: text)
+
+        guard !blocks.isEmpty else { return }
+
+        // Append blocks to existing page
+        _ = try await apiClient.appendBlockChildren(pageId: pageId, blocks: blocks, accessToken: accessToken)
+    }
+
+    /// Sync plain text to a new Notion page
+    func syncTextToNewPage(_ text: String, bookTitle: String, parentPageId: String) async throws -> String {
+        guard let accessToken = authService.getAccessToken() else {
+            throw NotionSyncError.notAuthenticated
+        }
+
+        // Build blocks from text
+        let blocks = buildTextBlocks(text: text)
+
+        // Create page request as child of parent page
+        let request = NotionPageRequest(
+            parentPageId: parentPageId,
+            title: bookTitle,
+            children: blocks.isEmpty ? nil : blocks
+        )
+
+        // Create page
+        let response = try await apiClient.createPage(request: request, accessToken: accessToken)
+
+        return response.id
+    }
+
+    private func buildTextBlocks(text: String) -> [NotionBlock] {
+        var blocks: [NotionBlock] = []
+
+        // Add timestamp divider
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        blocks.append(.paragraph("📅 Added: \(formatter.string(from: Date()))"))
+        blocks.append(.divider())
+
+        // Add text as callout (similar to highlights)
+        blocks.append(.callout(text, icon: "⭐"))
 
         return blocks
     }

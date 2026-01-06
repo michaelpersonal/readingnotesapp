@@ -33,9 +33,47 @@
 		4EC0AA342F0AEE53007EEAA7 /* PageSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA332F0AEE53007EEAA7 /* PageSelectionView.swift */; };
 		4EC0AA362F0B114E007EEAA7 /* HighlightMaskService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA352F0B114E007EEAA7 /* HighlightMaskService.swift */; };
 		4EC0AA382F0B14F4007EEAA7 /* LineBasedHighlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA372F0B14F4007EEAA7 /* LineBasedHighlightService.swift */; };
+		4EC0AA402F0C8570007EEAA7 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA3F2F0C8570007EEAA7 /* ShareViewController.swift */; };
+		4EC0AA432F0C8570007EEAA7 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = 4EC0AA422F0C8570007EEAA7 /* Base */; };
+		4EC0AA472F0C8570007EEAA7 /* ReadingNotesShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4EC0AA3D2F0C8570007EEAA7 /* ReadingNotesShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4EC0AA4D2F0C8AC9007EEAA7 /* SharePageSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA4C2F0C8AC9007EEAA7 /* SharePageSelectionView.swift */; };
+		4EC0AA4E2F0C8BD4007EEAA7 /* NotionSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA272F0AE1FD007EEAA7 /* NotionSyncService.swift */; };
+		4EC0AA4F2F0C8BD8007EEAA7 /* NotionAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA262F0AE1FD007EEAA7 /* NotionAuthService.swift */; };
+		4EC0AA502F0C8BDB007EEAA7 /* NotionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA252F0AE1FD007EEAA7 /* NotionAPIClient.swift */; };
+		4EC0AA512F0C8BE5007EEAA7 /* NotionBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA222F0AE1FD007EEAA7 /* NotionBlock.swift */; };
+		4EC0AA522F0C8BE9007EEAA7 /* NotionPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0AA232F0AE1FD007EEAA7 /* NotionPage.swift */; };
+		4EC0AA532F0C8C5A007EEAA7 /* Highlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0A9F32F0ACD58007EEAA7 /* Highlight.swift */; };
+		4EC0AA542F0C8C5D007EEAA7 /* KindleScreenshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0A9F42F0ACD58007EEAA7 /* KindleScreenshot.swift */; };
+		4EC0AA552F0C8C5F007EEAA7 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0A9F52F0ACD58007EEAA7 /* Note.swift */; };
+		4EC0AA562F0C8C63007EEAA7 /* NotionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC0A9F62F0ACD58007EEAA7 /* NotionConfig.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		4EC0AA452F0C8570007EEAA7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4EC0A9D72F0ACB50007EEAA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4EC0AA3C2F0C8570007EEAA7;
+			remoteInfo = ReadingNotesShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4EC0AA4B2F0C8570007EEAA7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4EC0AA472F0C8570007EEAA7 /* ReadingNotesShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		4EA3212F2F0C929E000F8A19 /* ReadingNotesShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReadingNotesShareExtension.entitlements; sourceTree = "<group>"; };
 		4EC0A9DF2F0ACB50007EEAA7 /* ReadingNotesApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadingNotesApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EC0A9E22F0ACB50007EEAA7 /* ReadingNotesAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingNotesAppApp.swift; sourceTree = "<group>"; };
 		4EC0A9E42F0ACB50007EEAA7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -65,10 +103,22 @@
 		4EC0AA332F0AEE53007EEAA7 /* PageSelectionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PageSelectionView.swift; sourceTree = "<group>"; };
 		4EC0AA352F0B114E007EEAA7 /* HighlightMaskService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightMaskService.swift; sourceTree = "<group>"; };
 		4EC0AA372F0B14F4007EEAA7 /* LineBasedHighlightService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LineBasedHighlightService.swift; sourceTree = "<group>"; };
+		4EC0AA3D2F0C8570007EEAA7 /* ReadingNotesShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReadingNotesShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4EC0AA3F2F0C8570007EEAA7 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		4EC0AA422F0C8570007EEAA7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
+		4EC0AA442F0C8570007EEAA7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4EC0AA4C2F0C8AC9007EEAA7 /* SharePageSelectionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SharePageSelectionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		4EC0A9DC2F0ACB50007EEAA7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4EC0AA3A2F0C8570007EEAA7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -82,6 +132,7 @@
 			isa = PBXGroup;
 			children = (
 				4EC0A9E12F0ACB50007EEAA7 /* ReadingNotesApp */,
+				4EC0AA3E2F0C8570007EEAA7 /* ReadingNotesShareExtension */,
 				4EC0A9E02F0ACB50007EEAA7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +141,7 @@
 			isa = PBXGroup;
 			children = (
 				4EC0A9DF2F0ACB50007EEAA7 /* ReadingNotesApp.app */,
+				4EC0AA3D2F0C8570007EEAA7 /* ReadingNotesShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -273,6 +325,18 @@
 			path = NotionSync;
 			sourceTree = "<group>";
 		};
+		4EC0AA3E2F0C8570007EEAA7 /* ReadingNotesShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				4EA3212F2F0C929E000F8A19 /* ReadingNotesShareExtension.entitlements */,
+				4EC0AA4C2F0C8AC9007EEAA7 /* SharePageSelectionView.swift */,
+				4EC0AA3F2F0C8570007EEAA7 /* ShareViewController.swift */,
+				4EC0AA412F0C8570007EEAA7 /* MainInterface.storyboard */,
+				4EC0AA442F0C8570007EEAA7 /* Info.plist */,
+			);
+			path = ReadingNotesShareExtension;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -283,15 +347,34 @@
 				4EC0A9DB2F0ACB50007EEAA7 /* Sources */,
 				4EC0A9DC2F0ACB50007EEAA7 /* Frameworks */,
 				4EC0A9DD2F0ACB50007EEAA7 /* Resources */,
+				4EC0AA4B2F0C8570007EEAA7 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				4EC0AA462F0C8570007EEAA7 /* PBXTargetDependency */,
 			);
 			name = ReadingNotesApp;
 			productName = ReadingNotesApp;
 			productReference = 4EC0A9DF2F0ACB50007EEAA7 /* ReadingNotesApp.app */;
 			productType = "com.apple.product-type.application";
+		};
+		4EC0AA3C2F0C8570007EEAA7 /* ReadingNotesShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4EC0AA482F0C8570007EEAA7 /* Build configuration list for PBXNativeTarget "ReadingNotesShareExtension" */;
+			buildPhases = (
+				4EC0AA392F0C8570007EEAA7 /* Sources */,
+				4EC0AA3A2F0C8570007EEAA7 /* Frameworks */,
+				4EC0AA3B2F0C8570007EEAA7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadingNotesShareExtension;
+			productName = ReadingNotesShareExtension;
+			productReference = 4EC0AA3D2F0C8570007EEAA7 /* ReadingNotesShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -304,6 +387,9 @@
 				LastUpgradeCheck = 1540;
 				TargetAttributes = {
 					4EC0A9DE2F0ACB50007EEAA7 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+					4EC0AA3C2F0C8570007EEAA7 = {
 						CreatedOnToolsVersion = 15.4;
 					};
 				};
@@ -322,6 +408,7 @@
 			projectRoot = "";
 			targets = (
 				4EC0A9DE2F0ACB50007EEAA7 /* ReadingNotesApp */,
+				4EC0AA3C2F0C8570007EEAA7 /* ReadingNotesShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -333,6 +420,14 @@
 			files = (
 				4EC0A9ED2F0ACB52007EEAA7 /* Preview Assets.xcassets in Resources */,
 				4EC0A9E92F0ACB52007EEAA7 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4EC0AA3B2F0C8570007EEAA7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4EC0AA432F0C8570007EEAA7 /* Base in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -370,7 +465,44 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4EC0AA392F0C8570007EEAA7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4EC0AA562F0C8C63007EEAA7 /* NotionConfig.swift in Sources */,
+				4EC0AA522F0C8BE9007EEAA7 /* NotionPage.swift in Sources */,
+				4EC0AA4F2F0C8BD8007EEAA7 /* NotionAuthService.swift in Sources */,
+				4EC0AA532F0C8C5A007EEAA7 /* Highlight.swift in Sources */,
+				4EC0AA4D2F0C8AC9007EEAA7 /* SharePageSelectionView.swift in Sources */,
+				4EC0AA402F0C8570007EEAA7 /* ShareViewController.swift in Sources */,
+				4EC0AA552F0C8C5F007EEAA7 /* Note.swift in Sources */,
+				4EC0AA502F0C8BDB007EEAA7 /* NotionAPIClient.swift in Sources */,
+				4EC0AA542F0C8C5D007EEAA7 /* KindleScreenshot.swift in Sources */,
+				4EC0AA512F0C8BE5007EEAA7 /* NotionBlock.swift in Sources */,
+				4EC0AA4E2F0C8BD4007EEAA7 /* NotionSyncService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4EC0AA462F0C8570007EEAA7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4EC0AA3C2F0C8570007EEAA7 /* ReadingNotesShareExtension */;
+			targetProxy = 4EC0AA452F0C8570007EEAA7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		4EC0AA412F0C8570007EEAA7 /* MainInterface.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				4EC0AA422F0C8570007EEAA7 /* Base */,
+			);
+			name = MainInterface.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		4EC0A9EE2F0ACB52007EEAA7 /* Debug */ = {
@@ -490,12 +622,14 @@
 		4EC0A9F12F0ACB52007EEAA7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ReadingNotesApp/ReadingNotesApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ReadingNotesApp/Preview Content\"";
+				DEVELOPMENT_TEAM = 9UD782RHCC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReadingNotesApp/Info.plist;
@@ -527,12 +661,14 @@
 		4EC0A9F22F0ACB52007EEAA7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ReadingNotesApp/ReadingNotesApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ReadingNotesApp/Preview Content\"";
+				DEVELOPMENT_TEAM = 9UD782RHCC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReadingNotesApp/Info.plist;
@@ -561,6 +697,63 @@
 			};
 			name = Release;
 		};
+		4EC0AA492F0C8570007EEAA7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReadingNotesShareExtension/ReadingNotesShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9UD782RHCC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReadingNotesShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ReadingNotesShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelguo.ReadingNotesApp.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4EC0AA4A2F0C8570007EEAA7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReadingNotesShareExtension/ReadingNotesShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9UD782RHCC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReadingNotesShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ReadingNotesShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelguo.ReadingNotesApp.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -578,6 +771,15 @@
 			buildConfigurations = (
 				4EC0A9F12F0ACB52007EEAA7 /* Debug */,
 				4EC0A9F22F0ACB52007EEAA7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4EC0AA482F0C8570007EEAA7 /* Build configuration list for PBXNativeTarget "ReadingNotesShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4EC0AA492F0C8570007EEAA7 /* Debug */,
+				4EC0AA4A2F0C8570007EEAA7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

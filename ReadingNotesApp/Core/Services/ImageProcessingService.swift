@@ -115,7 +115,6 @@ class ImageProcessingService {
             do {
                 try await processScreenshot(screenshot)
             } catch {
-                print("Error processing screenshot \(screenshot.id): \(error.localizedDescription)")
             }
         }
     }

@@ -32,19 +32,8 @@ class NotionAPIClient {
             encoder.keyEncodingStrategy = .convertToSnakeCase
             urlRequest.httpBody = try encoder.encode(request)
 
-            // Debug: print request body
-            if let bodyData = urlRequest.httpBody,
-               let bodyString = String(data: bodyData, encoding: .utf8) {
-                print("📤 Creating page with request: \(bodyString)")
-            }
-
             let (data, response) = try await self.session.data(for: urlRequest)
             try self.validateResponse(response, data: data)
-
-            // Debug: print response
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("📥 Received response: \(responseString)")
-            }
 
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -52,11 +41,7 @@ class NotionAPIClient {
             do {
                 return try decoder.decode(NotionPageResponse.self, from: data)
             } catch {
-                print("❌ Decoding error: \(error)")
-                if let decodingError = error as? DecodingError {
-                    print("❌ Detailed error: \(decodingError)")
-                }
-                throw NotionAPIError.badRequest(message: "Failed to decode response: \(error.localizedDescription)")
+                throw NotionAPIError.badRequest(message: "Failed to decode response")
             }
         }
     }
@@ -115,19 +100,8 @@ class NotionAPIClient {
             encoder.keyEncodingStrategy = .convertToSnakeCase
             urlRequest.httpBody = try encoder.encode(request)
 
-            // Debug: print request body
-            if let bodyData = urlRequest.httpBody,
-               let bodyString = String(data: bodyData, encoding: .utf8) {
-                print("📤 Appending blocks with request: \(bodyString)")
-            }
-
             let (data, response) = try await self.session.data(for: urlRequest)
             try self.validateResponse(response, data: data)
-
-            // Debug: print response
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("📥 Received append response: \(responseString)")
-            }
 
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -135,8 +109,7 @@ class NotionAPIClient {
             do {
                 return try decoder.decode(BlockChildrenResponse.self, from: data)
             } catch {
-                print("❌ Decoding error: \(error)")
-                throw NotionAPIError.badRequest(message: "Failed to decode append response: \(error.localizedDescription)")
+                throw NotionAPIError.badRequest(message: "Failed to decode response")
             }
         }
     }

@@ -1,19 +1,17 @@
 //
-//  PageSelectionView.swift
+//  SharePageSelectionView.swift
 //  ReadingNotesApp
 //
-//  View for selecting existing Notion page or creating new one
+//  View for selecting book page when sharing text from Kindle
 //
 
 import SwiftUI
-import SwiftData
 
-struct PageSelectionView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    let screenshot: KindleScreenshot
-    let authService: NotionAuthService
-
+@MainActor
+struct SharePageSelectionView: View {
+    let sharedText: String
+    let onComplete: () -> Void
+    
     @State private var searchQuery = ""
     @State private var pages: [SearchResult] = []
     @State private var isLoading = false
@@ -21,8 +19,8 @@ struct PageSelectionView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var showNewPageSheet = false
-    @State private var newPageTitle = ""
-
+    @State private var authService = NotionAuthService()
+    
     var filteredPages: [SearchResult] {
         if searchQuery.isEmpty {
             return pages
@@ -31,10 +29,29 @@ struct PageSelectionView: View {
             page.displayTitle.localizedCaseInsensitiveContains(searchQuery)
         }
     }
-
+    
     var body: some View {
         NavigationStack {
             VStack {
+                // Preview of shared text
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Shared Text")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    ScrollView {
+                        Text(sharedText)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                    }
+                    .frame(maxHeight: 150)
+                    .padding(.horizontal)
+                }
+                .padding(.vertical)
+                
+                Divider()
+                
                 if isLoading {
                     ProgressView("Loading pages...")
                         .padding()
@@ -48,7 +65,7 @@ struct PageSelectionView: View {
                                     .foregroundStyle(.blue)
                             }
                         }
-
+                        
                         if !filteredPages.isEmpty {
                             Section("Recent Pages") {
                                 ForEach(filteredPages, id: \.id) { page in
@@ -86,10 +103,10 @@ struct PageSelectionView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        dismiss()
+                        onComplete()
                     }
                 }
-
+                
                 ToolbarItem(placement: .primaryAction) {
                     if isSyncing {
                         ProgressView()
@@ -107,43 +124,44 @@ struct PageSelectionView: View {
                 Text(errorMessage ?? "An error occurred")
             }
             .sheet(isPresented: $showNewPageSheet) {
-                NewPageView(
-                    screenshot: screenshot,
+                ShareNewPageView(
+                    sharedText: sharedText,
                     authService: authService,
-                    onPageCreated: { pageId in
-                        dismiss()
+                    onPageCreated: {
+                        onComplete()
                     }
                 )
             }
         }
     }
-
+    
     @MainActor
     private func loadPages() async {
         isLoading = true
         defer { isLoading = false }
-
+        
         do {
-            let syncService = NotionSyncService(modelContext: modelContext, authService: authService)
+            // Create a temporary model context for the sync service
+            // Note: Share extensions can't use SwiftData, so we'll use UserDefaults for auth
+            let syncService = NotionSyncService(modelContext: nil, authService: authService)
             pages = try await syncService.searchPages()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
     }
-
+    
     @MainActor
     private func syncToPage(_ pageId: String) async {
-        // Prevent duplicate syncs
         guard !isSyncing else { return }
-
+        
         isSyncing = true
         defer { isSyncing = false }
-
+        
         do {
-            let syncService = NotionSyncService(modelContext: modelContext, authService: authService)
-            try await syncService.syncScreenshotToPage(screenshot, pageId: pageId)
-            dismiss()
+            let syncService = NotionSyncService(modelContext: nil, authService: authService)
+            try await syncService.syncTextToPage(sharedText, pageId: pageId)
+            onComplete()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
@@ -153,13 +171,13 @@ struct PageSelectionView: View {
 
 // MARK: - New Page View
 
-struct NewPageView: View {
+@MainActor
+struct ShareNewPageView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    let screenshot: KindleScreenshot
+    let sharedText: String
     let authService: NotionAuthService
-    let onPageCreated: (String) -> Void
-
+    let onPageCreated: () -> Void
+    
     @State private var pageTitle = ""
     @State private var parentPages: [SearchResult] = []
     @State private var selectedParentId: String?
@@ -167,7 +185,7 @@ struct NewPageView: View {
     @State private var isCreating = false
     @State private var errorMessage: String?
     @State private var showError = false
-
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -179,17 +197,7 @@ struct NewPageView: View {
                 } footer: {
                     Text("Enter the title for your new book page")
                 }
-
-                if let bookTitle = screenshot.sourceBook, bookTitle != "Untitled" {
-                    Section {
-                        Button {
-                            pageTitle = bookTitle
-                        } label: {
-                            Label("Use detected title: \(bookTitle)", systemImage: "wand.and.stars")
-                        }
-                    }
-                }
-
+                
                 Section {
                     if isLoading {
                         HStack {
@@ -229,7 +237,7 @@ struct NewPageView: View {
                 } footer: {
                     Text("Select where to create the new book page. This will be a sub-page of the selected page.")
                 }
-
+                
                 Section {
                     Button {
                         Task {
@@ -273,41 +281,38 @@ struct NewPageView: View {
             }
         }
     }
-
+    
     @MainActor
     private func loadParentPages() async {
         isLoading = true
         defer { isLoading = false }
-
+        
         do {
-            let syncService = NotionSyncService(modelContext: modelContext, authService: authService)
+            let syncService = NotionSyncService(modelContext: nil, authService: authService)
             parentPages = try await syncService.searchPages()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
     }
-
+    
     @MainActor
     private func createPage() async {
         guard let parentId = selectedParentId else { return }
-
-        // Prevent duplicate creates
         guard !isCreating else { return }
-
+        
         isCreating = true
         defer { isCreating = false }
-
+        
         do {
-            let syncService = NotionSyncService(modelContext: modelContext, authService: authService)
-            try await syncService.syncScreenshotToNewPage(screenshot, bookTitle: pageTitle, parentPageId: parentId)
+            let syncService = NotionSyncService(modelContext: nil, authService: authService)
+            _ = try await syncService.syncTextToNewPage(sharedText, bookTitle: pageTitle, parentPageId: parentId)
             dismiss()
-            if let pageId = screenshot.notionPageId {
-                onPageCreated(pageId)
-            }
+            onPageCreated()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
     }
 }
+

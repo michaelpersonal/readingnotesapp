@@ -329,7 +329,6 @@ class LineBasedHighlightService {
         
         // Fallback: if filtering removed all lines, try with lower threshold
         if filtered.isEmpty && !lines.isEmpty {
-            print("Warning: No lines passed overlap filter. Trying with lower threshold (5%)")
             filtered = lines.filter { textLine in
                 let overlapRatio = calculateOverlapRatioWithGridSampling(
                     lineBox: textLine.boundingBox,
@@ -342,7 +341,6 @@ class LineBasedHighlightService {
         
         // If still empty, use all lines (mask filtering might be too strict)
         if filtered.isEmpty && !lines.isEmpty {
-            print("Warning: Still no lines after fallback. Using all detected lines.")
             return lines
         }
         
