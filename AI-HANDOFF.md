@@ -2,8 +2,8 @@
 
 **Project**: Reading Notes App (iOS Kindle Screenshot OCR + Notion Sync)
 **Last Updated**: January 2026
-**Session**: Line-based highlight extraction implementation
-**Status**: Core features complete, line-based extraction implemented and tested
+**Session**: Share Extension + Production Cleanup
+**Status**: Production-ready with Share Extension for Kindle text sharing
 
 ---
 
@@ -29,9 +29,10 @@ Native iOS app that extracts highlighted text from Kindle screenshots using OCR 
 - ✅ Improved OCR with 2x upscaling and multiple preprocessing strategies
 - ✅ Grid-based overlap sampling for performance
 - ✅ Fallback mechanisms for better reliability
+- ✅ **Share Extension** - Share text directly from Kindle to Notion
+- ✅ **Production cleanup** - Removed all debug logging (32 print statements)
 
 **Known Issues**: ⚠️
-- Debug logging still active (needs cleanup for production)
 - App icon missing (1024x1024 PNG needed for App Store)
 - Book title extraction removed (was producing garbled text)
 
@@ -59,6 +60,10 @@ ReadingNotesApp/
 │   │   │   ├── HighlightDetectionService.swift # Color-based detection (legacy)
 │   │   │   ├── HighlightMaskService.swift      # Binary mask generation for highlights
 │   │   │   └── LineBasedHighlightService.swift # Line-based extraction with clustering
+│   │   │
+│   │   └── ShareExtension/              # Share Extension source files
+│   │       ├── ShareViewController.swift       # Extension entry point
+│   │       └── SharePageSelectionView.swift    # Page selection UI
 │   │   │
 │   │   ├── Repositories/
 │   │   │   └── ScreenshotRepository.swift      # Data access layer
@@ -94,9 +99,15 @@ ReadingNotesApp/
 ├── AI-HANDOFF.md                        # This file
 ├── NOTION_SETUP.md                      # Notion setup guide
 ├── APP_STORE_SUBMISSION_CHECKLIST.md    # App Store submission guide
+├── SHARE_EXTENSION_SETUP.md             # Share Extension setup guide
 ├── LINE_BASED_EXTRACTION_SUMMARY.md     # Line-based extraction details
 ├── HIGHLIGHT_EXTRACTION_PLAN.md         # Extraction algorithm plan
-└── OCR_IMPROVEMENT_OPTIONS.md           # OCR improvement options
+├── OCR_IMPROVEMENT_OPTIONS.md           # OCR improvement options
+│
+├── ReadingNotesShareExtension/          # Share Extension target
+│   ├── ShareViewController.swift        # Receives shared text
+│   ├── SharePageSelectionView.swift     # UI for page selection
+│   └── Info.plist                       # Extension configuration
 ```
 
 ---
@@ -241,6 +252,30 @@ After success, mark highlights as synced
 🔥 "Next highlight"
 ─────────
 ```
+
+### Share Extension Flow
+
+```
+User shares text from Kindle
+   ↓
+ShareViewController receives text (via NSExtensionContext)
+   ↓
+SharePageSelectionView appears
+   ↓
+User chooses:
+   A) Existing page → syncTextToPage()
+   B) Create new → syncTextToNewPage()
+   ↓
+Text synced to Notion as callout block
+   ↓
+Extension closes
+```
+
+**Key Implementation Details**:
+- Uses App Groups (`group.com.michaelguo.ReadingNotesApp`) for token sharing
+- NotionAuthService stores token in both Keychain (main app) and shared UserDefaults (extension)
+- Share Extension is a separate target: `ReadingNotesShareExtension`
+- Configured in Info.plist to accept text (`NSExtensionActivationSupportsText = true`)
 
 ---
 
@@ -624,43 +659,47 @@ Manual tests to run after changes:
 
 ## 🚀 Next Features to Implement
 
+### ✅ Completed
+1. ~~**Clean up for production**~~ ✅ DONE
+   - Removed all debug logging (32 print statements)
+   - Removed UI debug counters
+   - Production-ready code
+
+2. ~~**Share Extension**~~ ✅ DONE
+   - Share text directly from Kindle to Notion
+   - Page selection and creation
+   - App Groups for token sharing
+
 ### Priority 1: Core Improvements
-1. **Improve highlight extraction accuracy**
-   - Fine-tune merging thresholds based on testing
-   - Add confidence threshold filtering
-   - Handle edge cases (page headers, footers)
+1. **App icon** (Required for App Store)
+   - Create 1024x1024 PNG icon
+   - Add to Assets.xcassets
 
-2. **Clean up for production**
-   - Remove debug logging
-   - Remove UI debug counters
-   - Add user-friendly error messages
-   - Improve loading states
-
-3. **Search and filtering**
+2. **Search and filtering**
    - Search highlights by text
    - Filter by book
    - Filter by sync status
    - Sort options (date, book, confidence)
 
-### Priority 2: UX Enhancements
-4. **Share Extension**
-   - Quick import from Photos share sheet
-   - Background processing
-   - Notification when complete
+3. **Improve highlight extraction accuracy**
+   - Fine-tune merging thresholds based on testing
+   - Add confidence threshold filtering
+   - Handle edge cases (page headers, footers)
 
-5. **Batch operations**
+### Priority 2: UX Enhancements
+4. **Batch operations**
    - Select multiple screenshots
    - Batch process
    - Batch sync
    - Batch delete
 
-6. **Better error handling**
+5. **Better error handling**
    - Retry failed operations
    - Queue for offline sync
    - Show specific error messages
 
 ### Priority 3: Advanced Features
-7. **Automatic detection**
+6. **Automatic detection**
    - Monitor photo library for new screenshots
    - Auto-detect Kindle screenshots
    - Background processing

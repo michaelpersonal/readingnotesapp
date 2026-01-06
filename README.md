@@ -10,6 +10,7 @@ A native iOS app that extracts highlighted text from Kindle screenshots using OC
 - 📓 **Personal Notes** - Add your own notes to each highlight
 - ☁️ **Notion Sync** - Sync highlights to Notion with one-page-per-book organization
 - 🔄 **Background Processing** - Efficient async processing with progress tracking
+- 📤 **Share Extension** - Share highlighted text directly from Kindle app to Notion
 
 ## Requirements
 
@@ -71,6 +72,18 @@ See [NOTION_SETUP.md](NOTION_SETUP.md) for detailed setup instructions.
    - Select parent page (e.g., "My Reading Notes")
    - All highlights are synced with timestamp and color indicators
 
+### Share Extension (Quick Sharing from Kindle)
+
+1. **In Kindle App**
+   - Highlight text in your book
+   - Tap "Share"
+   - Select "Reading Notes" from the share sheet
+
+2. **In Share Extension**
+   - Preview the shared text
+   - Select an existing book page OR create a new one
+   - Text is synced directly to Notion
+
 ### Notion Organization
 
 Each book gets its own page with all highlights organized by sync date:
@@ -125,13 +138,21 @@ ReadingNotesApp/
 │   ├── Screenshots/                   # Screenshot management
 │   ├── Settings/                      # App settings
 │   └── Highlights/                    # Highlight views
-└── NotionSync/                        # Notion integration
-    ├── NotionAPIClient.swift
-    ├── NotionAuthService.swift
-    ├── NotionSyncService.swift
-    └── Models/
-        ├── NotionPage.swift
-        └── NotionBlock.swift
+├── NotionSync/                        # Notion integration
+│   ├── NotionAPIClient.swift
+│   ├── NotionAuthService.swift
+│   ├── NotionSyncService.swift
+│   └── Models/
+│       ├── NotionPage.swift
+│       └── NotionBlock.swift
+└── ShareExtension/                    # Share Extension files
+    ├── ShareViewController.swift
+    └── SharePageSelectionView.swift
+
+ReadingNotesShareExtension/            # Share Extension target
+├── ShareViewController.swift
+├── SharePageSelectionView.swift
+└── Info.plist
 ```
 
 ## Key Technical Details
@@ -212,14 +233,16 @@ xcodebuild -scheme ReadingNotesApp -destination 'platform=iOS Simulator,name=iPh
 ### Completed ✅
 - Screenshot import and storage
 - Highlight detection with color recognition
-- OCR text extraction
+- Line-based OCR text extraction
 - Personal note-taking
 - Notion sync with page organization
 - Sync status tracking
 - Reset sync functionality
+- **Share Extension** for quick import from Kindle
+- Production-ready code (debug logging removed)
 
 ### Future Enhancements
-- Share Extension for quick import
+- App icon for App Store
 - Automatic screenshot detection from photo library
 - iCloud backup
 - Export to PDF/Markdown
