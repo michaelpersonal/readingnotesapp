@@ -2,8 +2,8 @@
 
 **Project**: Reading Notes App (iOS Kindle Screenshot OCR + Notion Sync)
 **Last Updated**: January 2026
-**Session**: Share Extension + Production Cleanup
-**Status**: Production-ready with Share Extension for Kindle text sharing
+**Session**: AI Chat + Unified Sync Flow
+**Status**: Production-ready with AI chatbot and unified sync experience
 
 ---
 
@@ -21,6 +21,7 @@ Native iOS app that extracts highlighted text from Kindle screenshots using OCR 
 - Notion sync with token authentication
 - One-page-per-book organization
 - Sync status tracking and reset
+- **AI Chat** - Discuss highlights with GPT-4o-mini, save insights to Notion
 
 **Recent Improvements** (January 2026):
 - ✅ Implemented line-based extraction to avoid partial words
@@ -30,11 +31,19 @@ Native iOS app that extracts highlighted text from Kindle screenshots using OCR 
 - ✅ Grid-based overlap sampling for performance
 - ✅ Fallback mechanisms for better reliability
 - ✅ **Share Extension** - Share text directly from Kindle to Notion
-- ✅ **Production cleanup** - Removed all debug logging (32 print statements)
+- ✅ **Production cleanup** - Removed all debug logging
+- ✅ **AI Chat Feature** - Chat with OpenAI GPT-4o-mini about highlighted text
+- ✅ **AI Summary Generation** - Generates concise summary instead of saving all responses
+- ✅ **Sync Options** - Toggle to include/exclude highlights and AI notes
+- ✅ **Unified Flow** - Screenshot OCR now auto-opens sync page after processing
+- ✅ **Share to Main App** - Share Extension can pass text to main app for full features
+- ✅ **Long Text Handling** - Auto-splits text >2000 chars for Notion API
 
 **Known Issues**: ⚠️
 - App icon missing (1024x1024 PNG needed for App Store)
 - Book title extraction removed (was producing garbled text)
+- OpenAI API key stored in Secrets.swift (gitignored, user must create)
+- URL scheme `readingnotes://` must be configured in Info.plist
 
 ---
 
@@ -59,7 +68,13 @@ ReadingNotesApp/
 │   │   │   ├── OCRService.swift                # Vision Framework wrapper with upscaling
 │   │   │   ├── HighlightDetectionService.swift # Color-based detection (legacy)
 │   │   │   ├── HighlightMaskService.swift      # Binary mask generation for highlights
-│   │   │   └── LineBasedHighlightService.swift # Line-based extraction with clustering
+│   │   │   ├── LineBasedHighlightService.swift # Line-based extraction with clustering
+│   │   │   ├── ChatService.swift               # OpenAI GPT integration
+│   │   │   └── SharedTextManager.swift         # App Groups text sharing
+│   │   │
+│   │   ├── Config/
+│   │   │   ├── Secrets.swift                   # API keys (gitignored)
+│   │   │   └── Secrets.template.swift          # Template for API keys
 │   │   │
 │   │   └── ShareExtension/              # Share Extension source files
 │   │       ├── ShareViewController.swift       # Extension entry point
@@ -79,11 +94,19 @@ ReadingNotesApp/
 │   │   │   └── ViewModels/
 │   │   │       └── ScreenshotListViewModel.swift
 │   │   │
-│   │   └── Settings/
+│   │   ├── Settings/
+│   │   │   └── Views/
+│   │   │       ├── SettingsView.swift          # Main settings
+│   │   │       ├── NotionConnectionView.swift   # Auth UI
+│   │   │       └── PageSelectionView.swift      # Sync page picker + chat
+│   │   │
+│   │   ├── Chat/
+│   │   │   └── Views/
+│   │   │       └── ChatView.swift               # AI chat interface
+│   │   │
+│   │   └── SharedText/
 │   │       └── Views/
-│   │           ├── SettingsView.swift          # Main settings
-│   │           ├── NotionConnectionView.swift   # Auth UI
-│   │           └── PageSelectionView.swift      # Sync page picker
+│   │           └── SharedTextPageSelectionView.swift  # Full-featured sync for shared text
 │   │
 │   ├── NotionSync/                      # Notion integration
 │   │   ├── NotionAPIClient.swift        # HTTP client (rate limited)
@@ -277,6 +300,36 @@ Extension closes
 - Share Extension is a separate target: `ReadingNotesShareExtension`
 - Configured in Info.plist to accept text (`NSExtensionActivationSupportsText = true`)
 
+### AI Chat Flow
+
+```
+User processes screenshot or ready to sync
+   ↓
+PageSelectionView shows "Chat about this text" button
+   ↓
+ChatView opens with highlighted text as context
+   ↓
+ChatService sends context + messages to OpenAI GPT-4o-mini
+   ↓
+User has conversation about the text
+   ↓
+User taps "Save Notes" → AI responses become aiNotes array
+   ↓
+User syncs to Notion
+   ↓
+AI insights appended as separate section:
+   💡 AI Insights
+   🤖 "Summary or explanation..."
+```
+
+**Key Implementation Details**:
+- Uses OpenAI GPT-4o-mini model (fast, cheap, good quality)
+- API key stored in `Secrets.swift` (gitignored)
+- Template provided: `Secrets.template.swift`
+- System prompt sets context for reading assistant role
+- AI notes sync to Notion as callout blocks with 🤖 icon
+- Chat only available in main app (not Share Extension due to memory limits)
+
 ---
 
 ## 🛠️ How to Continue Development
@@ -291,9 +344,27 @@ cd readingnotesapp/ReadingNotesApp
 # Open in Xcode
 open ReadingNotesApp.xcodeproj
 
+# Configure API keys (REQUIRED for AI Chat)
+cp ReadingNotesApp/Core/Config/Secrets.template.swift ReadingNotesApp/Core/Config/Secrets.swift
+# Edit Secrets.swift and add your OpenAI API key
+
 # Build for simulator
 xcodebuild -scheme ReadingNotesApp -destination 'platform=iOS Simulator,name=iPhone 15' build
 ```
+
+### API Key Configuration
+
+The AI chat feature requires an OpenAI API key:
+
+1. Get an API key from https://platform.openai.com/api-keys
+2. Copy the template: `Secrets.template.swift` → `Secrets.swift`
+3. Edit `Secrets.swift` and add your key:
+   ```swift
+   enum Secrets {
+       static let openAIAPIKey = "sk-proj-your-key-here"
+   }
+   ```
+4. **IMPORTANT**: `Secrets.swift` is in `.gitignore` - never commit API keys!
 
 ### Running the App
 
@@ -661,7 +732,7 @@ Manual tests to run after changes:
 
 ### ✅ Completed
 1. ~~**Clean up for production**~~ ✅ DONE
-   - Removed all debug logging (32 print statements)
+   - Removed all debug logging
    - Removed UI debug counters
    - Production-ready code
 
@@ -669,6 +740,20 @@ Manual tests to run after changes:
    - Share text directly from Kindle to Notion
    - Page selection and creation
    - App Groups for token sharing
+   - "Open in App" option for full features
+
+3. ~~**AI Chat Feature**~~ ✅ DONE
+   - Chat with OpenAI GPT-4o-mini about highlights
+   - Available on page selection screen
+   - Generates summary of conversation (not all responses)
+   - Save AI insights to Notion
+   - API key management via Secrets.swift (gitignored)
+
+4. ~~**Unified Sync Experience**~~ ✅ DONE
+   - Screenshot OCR auto-opens sync page after processing
+   - Toggle options: include highlights, include AI notes
+   - Long text auto-split for Notion's 2000 char limit
+   - Consistent UI between screenshot and shared text flows
 
 ### Priority 1: Core Improvements
 1. **App icon** (Required for App Store)
@@ -806,6 +891,6 @@ git push origin main
 ---
 
 **Last updated**: January 2026
-**Recent changes**: Implemented line-based highlight extraction with robust clustering
-**Status**: Functional MVP with improved extraction, ready for App Store submission
-**Next steps**: Add app icon, prepare screenshots, submit to App Store
+**Recent changes**: AI chat with summary generation, unified sync flow, sync options
+**Status**: Functional MVP with AI chat, ready for App Store submission
+**Next steps**: Add app icon, configure URL scheme, prepare screenshots, submit to App Store

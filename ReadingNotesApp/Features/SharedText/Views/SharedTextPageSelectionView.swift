@@ -1,16 +1,15 @@
 //
-//  SharePageSelectionView.swift
+//  SharedTextPageSelectionView.swift
 //  ReadingNotesApp
 //
-//  View for selecting book page when sharing text from Kindle
+//  Full-featured page selection for shared text (with chat support)
 //
 
 import SwiftUI
 
-@MainActor
-struct SharePageSelectionView: View {
+struct SharedTextPageSelectionView: View {
     let sharedText: String
-    let onComplete: () -> Void
+    let onDismiss: () -> Void
     
     @State private var searchQuery = ""
     @State private var pages: [SearchResult] = []
@@ -19,14 +18,18 @@ struct SharePageSelectionView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var showNewPageSheet = false
-    @State private var showOpenAppAlert = false
-    @State private var authService = NotionAuthService()
+    @State private var showChatSheet = false
+    @State private var aiNotes: [String] = []
+    @StateObject private var authService = NotionAuthService()
     
-    // Sync option
+    // Sync options
     @State private var includeText = true
+    @State private var includeAINotes = true
     
-    // App Group for sharing text with main app
-    private let appGroupID = "group.com.michaelguo.ReadingNotesApp"
+    /// Check if at least one option is selected
+    private var canSync: Bool {
+        (includeText && !sharedText.isEmpty) || (includeAINotes && !aiNotes.isEmpty)
+    }
     
     var filteredPages: [SearchResult] {
         if searchQuery.isEmpty {
@@ -40,7 +43,7 @@ struct SharePageSelectionView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                // Preview of shared text (matching PageSelectionView style)
+                // Preview of shared text
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "text.quote")
@@ -58,50 +61,57 @@ struct SharePageSelectionView: View {
                             .background(Color.pink.opacity(0.1))
                             .cornerRadius(8)
                     }
-                    .frame(maxHeight: 100)
+                    .frame(maxHeight: 120)
                     .padding(.horizontal)
                     
-                    // Open in App button (for full features including chat)
+                    // Chat button
                     Button {
-                        openInMainApp()
+                        showChatSheet = true
                     } label: {
-                        Label("Open in App with AI Chat", systemImage: "bubble.left.and.bubble.right.fill")
+                        Label("Chat about this text", systemImage: "bubble.left.and.bubble.right.fill")
                             .font(.subheadline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
                             .cornerRadius(8)
                     }
                     .padding(.horizontal)
                     
-                    // Divider with "or"
-                    HStack {
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.3))
-                            .frame(height: 1)
-                        Text("or sync directly")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.3))
-                            .frame(height: 1)
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    
-                    // Sync option
-                    Toggle(isOn: $includeText) {
-                        HStack {
-                            Image(systemName: "text.quote")
-                                .foregroundColor(.pink)
-                                .frame(width: 24)
-                            Text("Save text to Notion")
-                                .font(.subheadline)
+                    // Sync options
+                    VStack(spacing: 8) {
+                        Toggle(isOn: $includeText) {
+                            HStack {
+                                Image(systemName: "text.quote")
+                                    .foregroundColor(.pink)
+                                    .frame(width: 24)
+                                Text("Include shared text")
+                                    .font(.subheadline)
+                            }
+                        }
+                        .toggleStyle(SwitchToggleStyle(tint: .pink))
+                        
+                        if !aiNotes.isEmpty {
+                            Toggle(isOn: $includeAINotes) {
+                                HStack {
+                                    Image(systemName: "lightbulb.fill")
+                                        .foregroundColor(.yellow)
+                                        .frame(width: 24)
+                                    Text("Include AI insights (\(aiNotes.count))")
+                                        .font(.subheadline)
+                                }
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: .yellow))
+                        }
+                        
+                        if !canSync {
+                            Text("Select at least one option to sync")
+                                .font(.caption)
+                                .foregroundColor(.red)
                         }
                     }
-                    .toggleStyle(SwitchToggleStyle(tint: .pink))
                     .padding(.horizontal)
+                    .padding(.top, 4)
                 }
                 .padding(.vertical)
                 
@@ -119,7 +129,7 @@ struct SharePageSelectionView: View {
                                 Label("Create New Book Page", systemImage: "plus.circle.fill")
                                     .foregroundStyle(.blue)
                             }
-                            .disabled(!includeText)
+                            .disabled(!canSync)
                         }
                         
                         if !filteredPages.isEmpty {
@@ -138,7 +148,7 @@ struct SharePageSelectionView: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
-                                    .disabled(isSyncing || !includeText)
+                                    .disabled(isSyncing || !canSync)
                                 }
                             }
                         } else if !isLoading {
@@ -154,12 +164,12 @@ struct SharePageSelectionView: View {
                     .searchable(text: $searchQuery, prompt: "Search pages")
                 }
             }
-            .navigationTitle("Select Book Page")
+            .navigationTitle("Sync Shared Text")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        onComplete()
+                        onDismiss()
                     }
                 }
                 
@@ -170,6 +180,7 @@ struct SharePageSelectionView: View {
                 }
             }
             .onAppear {
+                authService.checkAuthenticationStatus()
                 Task {
                     await loadPages()
                 }
@@ -179,19 +190,26 @@ struct SharePageSelectionView: View {
             } message: {
                 Text(errorMessage ?? "An error occurred")
             }
-            .alert("Text Saved", isPresented: $showOpenAppAlert) {
-                Button("OK") {
-                    onComplete()
-                }
-            } message: {
-                Text("Your text has been saved. Open Reading Notes app to use AI Chat and other features. The text will be ready for you!")
-            }
             .sheet(isPresented: $showNewPageSheet) {
-                ShareNewPageView(
+                SharedTextNewPageView(
                     sharedText: sharedText,
                     authService: authService,
-                    onPageCreated: {
-                        onComplete()
+                    aiNotes: includeAINotes ? aiNotes : [],
+                    includeText: includeText,
+                    onComplete: {
+                        onDismiss()
+                    }
+                )
+            }
+            .sheet(isPresented: $showChatSheet) {
+                ChatView(
+                    highlightedText: sharedText,
+                    onSaveNotes: { notes in
+                        aiNotes = notes
+                        showChatSheet = false
+                    },
+                    onDismiss: {
+                        showChatSheet = false
                     }
                 )
             }
@@ -215,42 +233,36 @@ struct SharePageSelectionView: View {
     @MainActor
     private func syncToPage(_ pageId: String) async {
         guard !isSyncing else { return }
-        guard includeText else { return }
+        guard canSync else { return }
         
         isSyncing = true
         defer { isSyncing = false }
         
         do {
             let syncService = NotionSyncService(modelContext: nil, authService: authService)
-            try await syncService.syncTextToPage(sharedText, pageId: pageId)
-            onComplete()
+            let textToSync = includeText ? sharedText : ""
+            let notesToSync = includeAINotes ? aiNotes : []
+            
+            if !textToSync.isEmpty || !notesToSync.isEmpty {
+                try await syncService.syncTextToPage(textToSync, pageId: pageId, aiNotes: notesToSync)
+            }
+            onDismiss()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
     }
-    
-    private func openInMainApp() {
-        // Save text to App Group for main app to retrieve
-        if let userDefaults = UserDefaults(suiteName: appGroupID) {
-            userDefaults.set(sharedText, forKey: "SharedTextFromExtension")
-            userDefaults.set(Date().timeIntervalSince1970, forKey: "SharedTextTimestamp")
-            userDefaults.synchronize()
-        }
-        
-        // Show alert instructing user to open the app
-        showOpenAppAlert = true
-    }
 }
 
 // MARK: - New Page View
 
-@MainActor
-struct ShareNewPageView: View {
+struct SharedTextNewPageView: View {
     @Environment(\.dismiss) private var dismiss
     let sharedText: String
     let authService: NotionAuthService
-    let onPageCreated: () -> Void
+    let aiNotes: [String]
+    let includeText: Bool
+    let onComplete: () -> Void
     
     @State private var pageTitle = ""
     @State private var parentPages: [SearchResult] = []
@@ -309,7 +321,7 @@ struct ShareNewPageView: View {
                 } header: {
                     Text("Parent Page")
                 } footer: {
-                    Text("Select where to create the new book page. This will be a sub-page of the selected page.")
+                    Text("Select where to create the new book page.")
                 }
                 
                 Section {
@@ -380,12 +392,14 @@ struct ShareNewPageView: View {
         
         do {
             let syncService = NotionSyncService(modelContext: nil, authService: authService)
-            _ = try await syncService.syncTextToNewPage(sharedText, bookTitle: pageTitle, parentPageId: parentId)
+            let textToSync = includeText ? sharedText : ""
+            _ = try await syncService.syncTextToNewPage(textToSync, bookTitle: pageTitle, parentPageId: parentId, aiNotes: aiNotes)
             dismiss()
-            onPageCreated()
+            onComplete()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
     }
 }
+

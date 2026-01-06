@@ -22,13 +22,13 @@ class NotionSyncService {
 
     // MARK: - Sync Screenshot
 
-    func syncScreenshotToPage(_ screenshot: KindleScreenshot, pageId: String) async throws {
+    func syncScreenshotToPage(_ screenshot: KindleScreenshot, pageId: String, aiNotes: [String] = [], includeHighlights: Bool = true) async throws {
         guard let accessToken = authService.getAccessToken() else {
             throw NotionSyncError.notAuthenticated
         }
 
         // Append highlights to existing page
-        try await appendHighlightsToPage(screenshot, pageId: pageId, accessToken: accessToken)
+        try await appendHighlightsToPage(screenshot, pageId: pageId, accessToken: accessToken, aiNotes: aiNotes, includeHighlights: includeHighlights)
 
         // Mark as synced
         screenshot.notionPageId = pageId
@@ -37,13 +37,13 @@ class NotionSyncService {
         try modelContext?.save()
     }
 
-    func syncScreenshotToNewPage(_ screenshot: KindleScreenshot, bookTitle: String, parentPageId: String) async throws {
+    func syncScreenshotToNewPage(_ screenshot: KindleScreenshot, bookTitle: String, parentPageId: String, aiNotes: [String] = [], includeHighlights: Bool = true) async throws {
         guard let accessToken = authService.getAccessToken() else {
             throw NotionSyncError.notAuthenticated
         }
 
         // Create new page with highlights as child of parent
-        let pageId = try await createPageWithHighlights(screenshot, title: bookTitle, parentPageId: parentPageId, accessToken: accessToken)
+        let pageId = try await createPageWithHighlights(screenshot, title: bookTitle, parentPageId: parentPageId, accessToken: accessToken, aiNotes: aiNotes, includeHighlights: includeHighlights)
 
         // Mark as synced
         screenshot.notionPageId = pageId
@@ -52,9 +52,18 @@ class NotionSyncService {
         try modelContext?.save()
     }
 
-    private func createPageWithHighlights(_ screenshot: KindleScreenshot, title: String, parentPageId: String, accessToken: String) async throws -> String {
+    private func createPageWithHighlights(_ screenshot: KindleScreenshot, title: String, parentPageId: String, accessToken: String, aiNotes: [String] = [], includeHighlights: Bool = true) async throws -> String {
         // Build blocks for highlights
-        var children = buildHighlightBlocks(from: screenshot)
+        var children: [NotionBlock] = []
+        
+        if includeHighlights {
+            children = buildHighlightBlocks(from: screenshot)
+        }
+        
+        // Add AI notes if present
+        if !aiNotes.isEmpty {
+            children.append(contentsOf: buildAINotesBlocks(aiNotes))
+        }
 
         // Create page request as child of parent page
         let request = NotionPageRequest(
@@ -77,9 +86,18 @@ class NotionSyncService {
         return response.id
     }
 
-    private func appendHighlightsToPage(_ screenshot: KindleScreenshot, pageId: String, accessToken: String) async throws {
+    private func appendHighlightsToPage(_ screenshot: KindleScreenshot, pageId: String, accessToken: String, aiNotes: [String] = [], includeHighlights: Bool = true) async throws {
         // Build blocks for highlights
-        let blocks = buildHighlightBlocks(from: screenshot)
+        var blocks: [NotionBlock] = []
+        
+        if includeHighlights {
+            blocks = buildHighlightBlocks(from: screenshot)
+        }
+        
+        // Add AI notes if present
+        if !aiNotes.isEmpty {
+            blocks.append(contentsOf: buildAINotesBlocks(aiNotes))
+        }
 
         guard !blocks.isEmpty else { return }
 
@@ -111,15 +129,22 @@ class NotionSyncService {
             blocks.append(.divider())
 
             for highlight in unsyncedHighlights {
-                // Add highlight as callout with appropriate icon
+                // Add highlight as callout with appropriate icon, splitting long text
                 let icon = highlightIcon(for: highlight.highlightColor)
-                blocks.append(.callout(highlight.extractedText, icon: icon))
+                let chunks = splitTextIntoChunks(highlight.extractedText, maxLength: 1900)
+                for (index, chunk) in chunks.enumerated() {
+                    let chunkIcon = index == 0 ? icon : "↳"
+                    blocks.append(.callout(chunk, icon: chunkIcon))
+                }
 
                 // Add notes as quotes under each highlight
                 // Only include unsynced notes
                 let unsyncedNotes = highlight.notes.filter { !$0.isSyncedToNotion }
                 for note in unsyncedNotes {
-                    blocks.append(.quote("💭 \(note.content)"))
+                    let noteChunks = splitTextIntoChunks("💭 \(note.content)", maxLength: 1900)
+                    for chunk in noteChunks {
+                        blocks.append(.quote(chunk))
+                    }
                 }
 
                 // Add spacing between highlights
@@ -133,13 +158,18 @@ class NotionSyncService {
     // MARK: - Sync Text (for Share Extension)
 
     /// Sync plain text to an existing Notion page
-    func syncTextToPage(_ text: String, pageId: String) async throws {
+    func syncTextToPage(_ text: String, pageId: String, aiNotes: [String] = []) async throws {
         guard let accessToken = authService.getAccessToken() else {
             throw NotionSyncError.notAuthenticated
         }
 
         // Build blocks from text
-        let blocks = buildTextBlocks(text: text)
+        var blocks = buildTextBlocks(text: text)
+        
+        // Add AI notes if present
+        if !aiNotes.isEmpty {
+            blocks.append(contentsOf: buildAINotesBlocks(aiNotes))
+        }
 
         guard !blocks.isEmpty else { return }
 
@@ -148,13 +178,18 @@ class NotionSyncService {
     }
 
     /// Sync plain text to a new Notion page
-    func syncTextToNewPage(_ text: String, bookTitle: String, parentPageId: String) async throws -> String {
+    func syncTextToNewPage(_ text: String, bookTitle: String, parentPageId: String, aiNotes: [String] = []) async throws -> String {
         guard let accessToken = authService.getAccessToken() else {
             throw NotionSyncError.notAuthenticated
         }
 
         // Build blocks from text
-        let blocks = buildTextBlocks(text: text)
+        var blocks = buildTextBlocks(text: text)
+        
+        // Add AI notes if present
+        if !aiNotes.isEmpty {
+            blocks.append(contentsOf: buildAINotesBlocks(aiNotes))
+        }
 
         // Create page request as child of parent page
         let request = NotionPageRequest(
@@ -179,10 +214,83 @@ class NotionSyncService {
         blocks.append(.paragraph("📅 Added: \(formatter.string(from: Date()))"))
         blocks.append(.divider())
 
-        // Add text as callout (similar to highlights)
-        blocks.append(.callout(text, icon: "⭐"))
+        // Add text as callout, splitting long text into chunks
+        let chunks = splitTextIntoChunks(text, maxLength: 1900)
+        for (index, chunk) in chunks.enumerated() {
+            let icon = index == 0 ? "⭐" : "↳"
+            blocks.append(.callout(chunk, icon: icon))
+        }
 
         return blocks
+    }
+    
+    private func buildAINotesBlocks(_ notes: [String]) -> [NotionBlock] {
+        var blocks: [NotionBlock] = []
+        
+        // Add AI insights section header
+        blocks.append(.divider())
+        blocks.append(.heading3("💡 AI Insights"))
+        
+        // Add each note, splitting long text into chunks
+        for note in notes {
+            let chunks = splitTextIntoChunks(note, maxLength: 1900) // Leave margin for safety
+            for (index, chunk) in chunks.enumerated() {
+                // Only show icon on first chunk
+                let icon = index == 0 ? "🤖" : "↳"
+                blocks.append(.callout(chunk, icon: icon))
+            }
+        }
+        
+        return blocks
+    }
+    
+    /// Split text into chunks that fit within Notion's 2000 character limit
+    private func splitTextIntoChunks(_ text: String, maxLength: Int) -> [String] {
+        guard text.count > maxLength else {
+            return [text]
+        }
+        
+        var chunks: [String] = []
+        var remaining = text
+        
+        while !remaining.isEmpty {
+            if remaining.count <= maxLength {
+                chunks.append(remaining)
+                break
+            }
+            
+            // Find a good break point (end of sentence or paragraph)
+            let searchRange = remaining.prefix(maxLength)
+            
+            // Try to break at paragraph
+            if let paragraphBreak = searchRange.lastIndex(of: "\n") {
+                let chunk = String(remaining[..<paragraphBreak])
+                chunks.append(chunk)
+                remaining = String(remaining[remaining.index(after: paragraphBreak)...])
+            }
+            // Try to break at sentence
+            else if let sentenceBreak = searchRange.lastIndex(where: { $0 == "." || $0 == "!" || $0 == "?" }) {
+                let endIndex = remaining.index(after: sentenceBreak)
+                let chunk = String(remaining[..<endIndex])
+                chunks.append(chunk)
+                remaining = String(remaining[endIndex...]).trimmingCharacters(in: .whitespaces)
+            }
+            // Try to break at space
+            else if let spaceBreak = searchRange.lastIndex(of: " ") {
+                let chunk = String(remaining[..<spaceBreak])
+                chunks.append(chunk)
+                remaining = String(remaining[remaining.index(after: spaceBreak)...])
+            }
+            // Hard break
+            else {
+                let endIndex = remaining.index(remaining.startIndex, offsetBy: maxLength)
+                let chunk = String(remaining[..<endIndex])
+                chunks.append(chunk)
+                remaining = String(remaining[endIndex...])
+            }
+        }
+        
+        return chunks
     }
 
     // MARK: - Search Pages

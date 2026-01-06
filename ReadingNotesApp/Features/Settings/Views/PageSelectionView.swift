@@ -21,7 +21,25 @@ struct PageSelectionView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var showNewPageSheet = false
+    @State private var showChatSheet = false
+    @State private var aiNotes: [String] = []
     @State private var newPageTitle = ""
+    
+    // Sync options
+    @State private var includeHighlights = true
+    @State private var includeAINotes = true
+    
+    /// Combined text from all highlights for chat context
+    private var highlightedText: String {
+        screenshot.highlights
+            .map { $0.extractedText }
+            .joined(separator: "\n\n---\n\n")
+    }
+    
+    /// Check if at least one option is selected
+    private var canSync: Bool {
+        (includeHighlights && !screenshot.highlights.isEmpty) || (includeAINotes && !aiNotes.isEmpty)
+    }
 
     var filteredPages: [SearchResult] {
         if searchQuery.isEmpty {
@@ -35,6 +53,82 @@ struct PageSelectionView: View {
     var body: some View {
         NavigationStack {
             VStack {
+                // Preview of highlighted text
+                if !highlightedText.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "text.quote")
+                                .foregroundColor(.pink)
+                            Text("Highlighted Text")
+                                .font(.headline)
+                        }
+                        .padding(.horizontal)
+                        
+                        ScrollView {
+                            Text(highlightedText)
+                                .font(.footnote)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.pink.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                        .frame(maxHeight: 120)
+                        .padding(.horizontal)
+                        
+                        // Chat button
+                        Button {
+                            showChatSheet = true
+                        } label: {
+                            Label("Chat about this text", systemImage: "bubble.left.and.bubble.right.fill")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.blue.opacity(0.1))
+                                .foregroundColor(.blue)
+                                .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
+                        
+                        // Sync options
+                        VStack(spacing: 8) {
+                            Toggle(isOn: $includeHighlights) {
+                                HStack {
+                                    Image(systemName: "text.quote")
+                                        .foregroundColor(.pink)
+                                        .frame(width: 24)
+                                    Text("Include highlighted text")
+                                        .font(.subheadline)
+                                }
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: .pink))
+                            
+                            if !aiNotes.isEmpty {
+                                Toggle(isOn: $includeAINotes) {
+                                    HStack {
+                                        Image(systemName: "lightbulb.fill")
+                                            .foregroundColor(.yellow)
+                                            .frame(width: 24)
+                                        Text("Include AI insights (\(aiNotes.count))")
+                                            .font(.subheadline)
+                                    }
+                                }
+                                .toggleStyle(SwitchToggleStyle(tint: .yellow))
+                            }
+                            
+                            if !canSync {
+                                Text("Select at least one option to sync")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 4)
+                    }
+                    .padding(.vertical)
+                    
+                    Divider()
+                }
+                
                 if isLoading {
                     ProgressView("Loading pages...")
                         .padding()
@@ -65,7 +159,7 @@ struct PageSelectionView: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
-                                    .disabled(isSyncing)
+                                    .disabled(isSyncing || !canSync)
                                 }
                             }
                         } else if !isLoading {
@@ -110,8 +204,22 @@ struct PageSelectionView: View {
                 NewPageView(
                     screenshot: screenshot,
                     authService: authService,
+                    aiNotes: includeAINotes ? aiNotes : [],
+                    includeHighlights: includeHighlights,
                     onPageCreated: { pageId in
                         dismiss()
+                    }
+                )
+            }
+            .sheet(isPresented: $showChatSheet) {
+                ChatView(
+                    highlightedText: highlightedText,
+                    onSaveNotes: { notes in
+                        aiNotes = notes
+                        showChatSheet = false
+                    },
+                    onDismiss: {
+                        showChatSheet = false
                     }
                 )
             }
@@ -136,13 +244,20 @@ struct PageSelectionView: View {
     private func syncToPage(_ pageId: String) async {
         // Prevent duplicate syncs
         guard !isSyncing else { return }
+        guard canSync else { return }
 
         isSyncing = true
         defer { isSyncing = false }
 
         do {
             let syncService = NotionSyncService(modelContext: modelContext, authService: authService)
-            try await syncService.syncScreenshotToPage(screenshot, pageId: pageId)
+            let notesToSync = includeAINotes ? aiNotes : []
+            try await syncService.syncScreenshotToPage(
+                screenshot,
+                pageId: pageId,
+                aiNotes: notesToSync,
+                includeHighlights: includeHighlights
+            )
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -158,6 +273,8 @@ struct NewPageView: View {
     @Environment(\.modelContext) private var modelContext
     let screenshot: KindleScreenshot
     let authService: NotionAuthService
+    let aiNotes: [String]
+    let includeHighlights: Bool
     let onPageCreated: (String) -> Void
 
     @State private var pageTitle = ""
@@ -300,7 +417,13 @@ struct NewPageView: View {
 
         do {
             let syncService = NotionSyncService(modelContext: modelContext, authService: authService)
-            try await syncService.syncScreenshotToNewPage(screenshot, bookTitle: pageTitle, parentPageId: parentId)
+            try await syncService.syncScreenshotToNewPage(
+                screenshot,
+                bookTitle: pageTitle,
+                parentPageId: parentId,
+                aiNotes: aiNotes,
+                includeHighlights: includeHighlights
+            )
             dismiss()
             if let pageId = screenshot.notionPageId {
                 onPageCreated(pageId)

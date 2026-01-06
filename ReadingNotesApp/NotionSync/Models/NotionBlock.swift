@@ -133,6 +133,22 @@ struct NotionBlock: Codable {
         )
     }
 
+    static func heading3(_ text: String) -> NotionBlock {
+        NotionBlock(
+            type: "heading_3",
+            paragraph: nil,
+            heading1: nil,
+            heading2: nil,
+            heading3: HeadingBlock(richText: [NotionRichText(content: text)]),
+            callout: nil,
+            quote: nil,
+            bulletedListItem: nil,
+            numberedListItem: nil,
+            image: nil,
+            divider: nil
+        )
+    }
+
     static func callout(_ text: String, icon: String = "💡") -> NotionBlock {
         NotionBlock(
             type: "callout",

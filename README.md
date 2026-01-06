@@ -11,6 +11,7 @@ A native iOS app that extracts highlighted text from Kindle screenshots using OC
 - ☁️ **Notion Sync** - Sync highlights to Notion with one-page-per-book organization
 - 🔄 **Background Processing** - Efficient async processing with progress tracking
 - 📤 **Share Extension** - Share highlighted text directly from Kindle app to Notion
+- 🤖 **AI Chat** - Discuss your highlights with GPT-4o-mini and save insights to Notion
 
 ## Requirements
 
@@ -18,6 +19,7 @@ A native iOS app that extracts highlighted text from Kindle screenshots using OC
 - Xcode 15.0+
 - Swift 5.9+
 - Notion Integration Token (for syncing)
+- OpenAI API Key (for AI chat feature)
 
 ## Installation
 
@@ -47,6 +49,17 @@ To sync highlights to Notion, you need to set up a Notion integration:
 5. Paste your token
 
 See [NOTION_SETUP.md](NOTION_SETUP.md) for detailed setup instructions.
+
+### OpenAI API Key (for AI Chat)
+
+To use the AI chat feature:
+
+1. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Copy `Secrets.template.swift` to `Secrets.swift`
+3. Add your API key to `Secrets.swift`
+4. Build and run the app
+
+**Note**: `Secrets.swift` is gitignored and will not be committed.
 
 ## Usage
 
@@ -84,6 +97,22 @@ See [NOTION_SETUP.md](NOTION_SETUP.md) for detailed setup instructions.
    - Select an existing book page OR create a new one
    - Text is synced directly to Notion
 
+### AI Chat (Discuss Your Highlights)
+
+1. **After Processing Screenshot**
+   - Tap "Sync to Notion"
+   - Before selecting a page, tap "Chat about this text"
+
+2. **In Chat View**
+   - Ask questions about the highlighted passage
+   - Get explanations, context, or deeper analysis
+   - GPT-4o-mini helps you understand the text better
+
+3. **Save Insights**
+   - Tap "Save Notes" to save AI responses
+   - These insights will be synced to Notion as a separate section
+   - Look for "💡 AI Insights" in your Notion page
+
 ### Notion Organization
 
 Each book gets its own page with all highlights organized by sync date:
@@ -96,6 +125,10 @@ Each book gets its own page with all highlights organized by sync date:
 ├─ 💭 "Your personal note"
 ├─ ─────────
 ├─ 🔥 "Highlighted passage with orange"
+├─ ─────────
+├─ 💡 AI Insights
+├─ 🤖 "Summary of the passage..."
+├─ 🤖 "Key concepts explained..."
 ├─ ─────────
 ```
 
@@ -240,6 +273,11 @@ xcodebuild -scheme ReadingNotesApp -destination 'platform=iOS Simulator,name=iPh
 - Reset sync functionality
 - **Share Extension** for quick import from Kindle
 - Production-ready code (debug logging removed)
+- **AI Chat** with GPT-4o-mini for discussing highlights
+- AI summary generation (concise notes from conversations)
+- Sync options (choose what to include)
+- Unified sync flow (auto-opens after processing)
+- Long text handling (auto-splits for Notion API)
 
 ### Future Enhancements
 - App icon for App Store

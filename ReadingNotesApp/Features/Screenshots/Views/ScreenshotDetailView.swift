@@ -210,6 +210,11 @@ struct ScreenshotDetailView: View {
         do {
             try await processingService.processScreenshot(screenshot)
             isProcessing = false
+            
+            // Automatically show page selection after successful processing
+            if !screenshot.highlights.isEmpty && authService.isAuthenticated {
+                showPageSelection = true
+            }
         } catch {
             processingError = error.localizedDescription
             showError = true
@@ -226,6 +231,11 @@ struct ScreenshotDetailView: View {
         do {
             try await processingService.reprocessScreenshot(screenshot)
             isProcessing = false
+            
+            // Automatically show page selection after successful reprocessing
+            if !screenshot.highlights.isEmpty && authService.isAuthenticated {
+                showPageSelection = true
+            }
         } catch {
             processingError = error.localizedDescription
             showError = true

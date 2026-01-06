@@ -1,0 +1,37 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+
+# OS files
+.DS_Store
+*.swp
+*~
+
+# API Keys and Secrets - NEVER COMMIT
+.env
+*.env
+Secrets.swift
+APIKeys.swift
+Config.xcconfig
+
+# Local configuration
+*.local.swift
+
