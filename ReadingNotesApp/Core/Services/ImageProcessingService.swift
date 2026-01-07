@@ -16,15 +16,24 @@ class ImageProcessingService {
     private let ocrService: OCRService
     private let highlightDetectionService: HighlightDetectionService
     private let lineBasedService: LineBasedHighlightService
-    private let modelContext: ModelContext
+    private var modelContext: ModelContext?
     
     // Tuning parameters (legacy - kept for compatibility)
     private let overlapThreshold: Float = 0.15
     private let verticalPaddingRatio: CGFloat = 0.15
     private let horizontalPaddingRatio: CGFloat = 0.05
 
+    /// Initialize with ModelContext for full functionality (saving to SwiftData)
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        self.ocrService = OCRService()
+        self.highlightDetectionService = HighlightDetectionService()
+        self.lineBasedService = LineBasedHighlightService()
+    }
+    
+    /// Initialize without ModelContext for text extraction only (used by Share Extension)
+    init() {
+        self.modelContext = nil
         self.ocrService = OCRService()
         self.highlightDetectionService = HighlightDetectionService()
         self.lineBasedService = LineBasedHighlightService()
@@ -33,6 +42,10 @@ class ImageProcessingService {
     // MARK: - Main Processing Pipeline
 
     func processScreenshot(_ screenshot: KindleScreenshot) async throws {
+        guard let modelContext = modelContext else {
+            throw ProcessingError.noModelContext
+        }
+        
         // Update status to processing
         screenshot.processingStatus = .processing
         try modelContext.save()
@@ -100,10 +113,35 @@ class ImageProcessingService {
         }
     }
     
+    // MARK: - Text Extraction Only (for Share Extension)
+    
+    /// Process an image and return extracted highlighted text without saving to database
+    /// Used by Share Extension where SwiftData context is not available
+    func processScreenshotForText(_ image: UIImage) async throws -> [String] {
+        // Step 1: Create highlight mask
+        guard let mask = HighlightMaskService.createHighlightMask(from: image) else {
+            throw ProcessingError.noHighlightsDetected
+        }
+        
+        // Step 2: Use line-based extraction
+        let extractedPassages = try await lineBasedService.extractHighlightedLines(
+            from: image,
+            mask: mask
+        )
+        
+        // Filter out empty passages
+        let filteredPassages = extractedPassages.filter { 
+            !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+        }
+        
+        return filteredPassages
+    }
 
     // MARK: - Batch Processing
 
     func processPendingScreenshots() async {
+        guard let modelContext = modelContext else { return }
+        
         let descriptor = FetchDescriptor<KindleScreenshot>()
         guard let allScreenshots = try? modelContext.fetch(descriptor) else {
             return
@@ -122,6 +160,10 @@ class ImageProcessingService {
     // MARK: - Reprocessing
 
     func reprocessScreenshot(_ screenshot: KindleScreenshot) async throws {
+        guard let modelContext = modelContext else {
+            throw ProcessingError.noModelContext
+        }
+        
         // Clear existing highlights
         for highlight in screenshot.highlights {
             modelContext.delete(highlight)
@@ -142,6 +184,7 @@ enum ProcessingError: LocalizedError {
     case invalidImage
     case noHighlightsDetected
     case ocrFailed
+    case noModelContext
 
     var errorDescription: String? {
         switch self {
@@ -151,6 +194,8 @@ enum ProcessingError: LocalizedError {
             return "No highlights detected in screenshot"
         case .ocrFailed:
             return "Text recognition failed"
+        case .noModelContext:
+            return "Database context not available"
         }
     }
 }

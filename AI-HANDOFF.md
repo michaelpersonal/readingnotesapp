@@ -2,8 +2,8 @@
 
 **Project**: Reading Notes App (iOS Kindle Screenshot OCR + Notion Sync)
 **Last Updated**: January 2026
-**Session**: AI Chat + Unified Sync Flow
-**Status**: Production-ready with AI chatbot and unified sync experience
+**Session**: Screenshot Sharing via Share Extension
+**Status**: Production-ready with AI chatbot, screenshot sharing, and unified sync experience
 
 ---
 
@@ -31,6 +31,7 @@ Native iOS app that extracts highlighted text from Kindle screenshots using OCR 
 - ✅ Grid-based overlap sampling for performance
 - ✅ Fallback mechanisms for better reliability
 - ✅ **Share Extension** - Share text directly from Kindle to Notion
+- ✅ **Screenshot Sharing** - Share screenshots directly from any app to process with OCR
 - ✅ **Production cleanup** - Removed all debug logging
 - ✅ **AI Chat Feature** - Chat with OpenAI GPT-4o-mini about highlighted text
 - ✅ **AI Summary Generation** - Generates concise summary instead of saving all responses
@@ -70,7 +71,7 @@ ReadingNotesApp/
 │   │   │   ├── HighlightMaskService.swift      # Binary mask generation for highlights
 │   │   │   ├── LineBasedHighlightService.swift # Line-based extraction with clustering
 │   │   │   ├── ChatService.swift               # OpenAI GPT integration
-│   │   │   └── SharedTextManager.swift         # App Groups text sharing
+│   │   │   └── SharedTextManager.swift         # App Groups text/image sharing
 │   │   │
 │   │   ├── Config/
 │   │   │   ├── Secrets.swift                   # API keys (gitignored)
@@ -104,9 +105,13 @@ ReadingNotesApp/
 │   │   │   └── Views/
 │   │   │       └── ChatView.swift               # AI chat interface
 │   │   │
-│   │   └── SharedText/
+│   │   ├── SharedText/
+│   │   │   └── Views/
+│   │   │       └── SharedTextPageSelectionView.swift  # Full-featured sync for shared text
+│   │   │
+│   │   └── SharedImage/
 │   │       └── Views/
-│   │           └── SharedTextPageSelectionView.swift  # Full-featured sync for shared text
+│   │           └── SharedImageProcessingView.swift    # OCR processing for shared images
 │   │
 │   ├── NotionSync/                      # Notion integration
 │   │   ├── NotionAPIClient.swift        # HTTP client (rate limited)
@@ -278,6 +283,7 @@ After success, mark highlights as synced
 
 ### Share Extension Flow
 
+**For Text Sharing:**
 ```
 User shares text from Kindle
    ↓
@@ -294,11 +300,32 @@ Text synced to Notion as callout block
 Extension closes
 ```
 
+**For Screenshot Sharing:**
+```
+User shares screenshot from Photos or screenshot preview
+   ↓
+ShareViewController detects image attachment
+   ↓
+Image saved to App Group shared container via SharedTextManager
+   ↓
+Main app opened via URL scheme (readingnotes://sharedimage)
+   ↓
+SharedImageProcessingView processes image with OCR
+   ↓
+Extracted text shown in SharedTextPageSelectionView
+   ↓
+User can chat with AI and sync to Notion
+```
+
 **Key Implementation Details**:
-- Uses App Groups (`group.com.michaelguo.ReadingNotesApp`) for token sharing
+- Uses App Groups (`group.com.michaelguo.ReadingNotesApp`) for token and image sharing
 - NotionAuthService stores token in both Keychain (main app) and shared UserDefaults (extension)
 - Share Extension is a separate target: `ReadingNotesShareExtension`
-- Configured in Info.plist to accept text (`NSExtensionActivationSupportsText = true`)
+- Configured in Info.plist to accept text AND images:
+  - `NSExtensionActivationSupportsText = true`
+  - `NSExtensionActivationSupportsImageWithMaxCount = 1`
+- Images saved to shared container file (too large for UserDefaults)
+- URL scheme `readingnotes://sharedimage` triggers OCR in main app
 
 ### AI Chat Flow
 

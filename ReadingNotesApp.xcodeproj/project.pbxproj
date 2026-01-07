@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4E5E69812F0DD9E2002D5748 /* SharedImageProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5E697E2F0DD9E2002D5748 /* SharedImageProcessingView.swift */; };
+		4E5E69822F0DDAD4002D5748 /* SharedTextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA3213F2F0CAAB0000F8A19 /* SharedTextManager.swift */; };
 		4EA321372F0C9E44000F8A19 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA321342F0C9E44000F8A19 /* Secrets.swift */; };
 		4EA321382F0C9E44000F8A19 /* Secrets.template.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA321352F0C9E44000F8A19 /* Secrets.template.swift */; };
 		4EA3213A2F0C9E5C000F8A19 /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA321392F0C9E5C000F8A19 /* ChatService.swift */; };
@@ -79,6 +81,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4E5E697E2F0DD9E2002D5748 /* SharedImageProcessingView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SharedImageProcessingView.swift; sourceTree = "<group>"; };
 		4EA3212F2F0C929E000F8A19 /* ReadingNotesShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReadingNotesShareExtension.entitlements; sourceTree = "<group>"; };
 		4EA321342F0C9E44000F8A19 /* Secrets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		4EA321352F0C9E44000F8A19 /* Secrets.template.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Secrets.template.swift; sourceTree = "<group>"; };
@@ -140,6 +143,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4E5E697F2F0DD9E2002D5748 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				4E5E697E2F0DD9E2002D5748 /* SharedImageProcessingView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		4E5E69802F0DD9E2002D5748 /* SharedImage */ = {
+			isa = PBXGroup;
+			children = (
+				4E5E697F2F0DD9E2002D5748 /* Views */,
+			);
+			path = SharedImage;
+			sourceTree = "<group>";
+		};
 		4EA321362F0C9E44000F8A19 /* Config */ = {
 			isa = PBXGroup;
 			children = (
@@ -353,6 +372,7 @@
 		4EC0AA0E2F0ACD80007EEAA7 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				4E5E69802F0DD9E2002D5748 /* SharedImage */,
 				4EA321432F0CAAE7000F8A19 /* SharedText */,
 				4EA3213D2F0C9E7F000F8A19 /* Chat */,
 				4EC0AA032F0ACD80007EEAA7 /* Highlights */,
@@ -504,6 +524,7 @@
 				4EC0AA0F2F0ACD80007EEAA7 /* ScreenshotListViewModel.swift in Sources */,
 				4EC0AA362F0B114E007EEAA7 /* HighlightMaskService.swift in Sources */,
 				4EC0AA102F0ACD80007EEAA7 /* ScreenshotDetailView.swift in Sources */,
+				4E5E69812F0DD9E2002D5748 /* SharedImageProcessingView.swift in Sources */,
 				4EC0AA292F0AE1FD007EEAA7 /* NotionBlock.swift in Sources */,
 				4EC0AA212F0AD78E007EEAA7 /* ImageProcessor.swift in Sources */,
 				4EC0AA002F0ACD59007EEAA7 /* NotionConfig.swift in Sources */,
@@ -534,6 +555,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4EC0AA562F0C8C63007EEAA7 /* NotionConfig.swift in Sources */,
+				4E5E69822F0DDAD4002D5748 /* SharedTextManager.swift in Sources */,
 				4EC0AA522F0C8BE9007EEAA7 /* NotionPage.swift in Sources */,
 				4EC0AA4F2F0C8BD8007EEAA7 /* NotionAuthService.swift in Sources */,
 				4EC0AA532F0C8C5A007EEAA7 /* Highlight.swift in Sources */,

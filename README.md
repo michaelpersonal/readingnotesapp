@@ -10,7 +10,7 @@ A native iOS app that extracts highlighted text from Kindle screenshots using OC
 - 📓 **Personal Notes** - Add your own notes to each highlight
 - ☁️ **Notion Sync** - Sync highlights to Notion with one-page-per-book organization
 - 🔄 **Background Processing** - Efficient async processing with progress tracking
-- 📤 **Share Extension** - Share highlighted text directly from Kindle app to Notion
+- 📤 **Share Extension** - Share highlighted text or screenshots directly from Kindle app
 - 🤖 **AI Chat** - Discuss your highlights with GPT-4o-mini and save insights to Notion
 
 ## Requirements
@@ -87,6 +87,7 @@ To use the AI chat feature:
 
 ### Share Extension (Quick Sharing from Kindle)
 
+**Share Highlighted Text:**
 1. **In Kindle App**
    - Highlight text in your book
    - Tap "Share"
@@ -96,6 +97,21 @@ To use the AI chat feature:
    - Preview the shared text
    - Select an existing book page OR create a new one
    - Text is synced directly to Notion
+
+**Share Screenshots:**
+1. **Take a Screenshot**
+   - In Kindle (or any app), take a screenshot of highlighted text
+   - Tap the screenshot preview in bottom-left corner
+   - Or open the screenshot from Photos app
+
+2. **Share to Reading Notes**
+   - Tap Share button
+   - Select "Reading Notes" from the share sheet
+
+3. **Automatic Processing**
+   - App opens automatically
+   - OCR extracts highlighted text from the image
+   - Review extracted text, chat with AI, sync to Notion
 
 ### AI Chat (Discuss Your Highlights)
 
@@ -271,7 +287,8 @@ xcodebuild -scheme ReadingNotesApp -destination 'platform=iOS Simulator,name=iPh
 - Notion sync with page organization
 - Sync status tracking
 - Reset sync functionality
-- **Share Extension** for quick import from Kindle
+- **Share Extension** for quick import from Kindle (text and screenshots)
+- **Screenshot Sharing** - Share screenshots directly for OCR processing
 - Production-ready code (debug logging removed)
 - **AI Chat** with GPT-4o-mini for discussing highlights
 - AI summary generation (concise notes from conversations)
